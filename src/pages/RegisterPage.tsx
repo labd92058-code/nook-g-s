@@ -67,9 +67,7 @@ export default function RegisterPage() {
         className="w-full max-w-[420px] bg-surface border border-border rounded-2xl p-8 shadow-2xl z-10"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-11 h-11 bg-accent rounded-full flex items-center justify-center text-white font-extrabold text-xl mb-3 shadow-lg shadow-accent/20">
-            N
-          </div>
+          <img src="/favicon.svg" className="w-11 h-11 mb-3 drop-shadow-lg" alt="Nook OS" />
           <h1 className="text-xl font-bold text-text">Nook OS</h1>
           <p className="text-sm text-text2 mt-1">{t('auth.subtitle')}</p>
         </div>

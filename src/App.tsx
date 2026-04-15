@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase'
 import { useAuthStore } from './stores/authStore'
 import { useSessionStore } from './stores/sessionStore'
 import { useUIStore } from './stores/uiStore'
+import { Loader2 } from 'lucide-react'
 import { ToastContainer } from './components/ui/Toast'
 
 // Pages (to be created)
@@ -41,8 +42,16 @@ const AuthGuard = ({ children, requireOwner = false }: { children: React.ReactNo
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <div className="h-8 w-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg">
+        <motion.div
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="flex flex-col items-center"
+        >
+          <img src="/favicon.svg" className="w-16 h-16 mb-4 drop-shadow-lg" alt="Nook OS" />
+          <h1 className="text-2xl font-bold text-text mb-6">Nook OS</h1>
+          <Loader2 size={24} className="text-text3 animate-spin" />
+        </motion.div>
       </div>
     )
   }
