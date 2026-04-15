@@ -1,0 +1,6 @@
+{
+  "name": "Nook OS",
+  "description": "Système premium de gestion de sessions pour cafés au Maroc. Gestion du temps, des consommations, des comptes clients et rapports détaillés.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
