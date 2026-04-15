@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
+import { useAudit } from '../hooks/useAudit'
 import { Button } from '../components/ui/Button'
 import { Session, Product } from '../types'
 import { BottomSheet } from '../components/ui/BottomSheet'
@@ -22,6 +23,7 @@ export default function SessionDetailPage() {
   const navigate = useNavigate()
   const { cafe, type } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
+  const { logAction } = useAudit()
 
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -116,6 +118,17 @@ export default function SessionDetailPage() {
         .single()
       
       if (error) throw error
+      
+      await logAction('extras_added', {
+        session_id: session.id,
+        customer_name: session.customer_name,
+        seat_number: session.seat_number,
+        extras_added: Object.entries(selectedExtras).filter(([_, q]: [string, any]) => q > 0).map(([id, q]: [string, any]) => {
+          const p = products.find(p => p.id === id)
+          return { name: p?.name, qty: q, price: p?.price }
+        })
+      })
+
       setSession(data)
       setShowExtras(false)
       setSelectedExtras({})
@@ -170,6 +183,15 @@ export default function SessionDetailPage() {
         .eq('id', session.id)
       
       if (error) throw error
+
+      await logAction('session_closed', {
+        session_id: session.id,
+        customer_name: session.customer_name,
+        seat_number: session.seat_number,
+        duration_minutes: durationMinutes,
+        total_amount: totalAmount,
+        payment_method: method
+      })
 
       addToast(`Session clôturée — ${totalAmount.toFixed(2)} DH`, "success")
       navigate('/dashboard')

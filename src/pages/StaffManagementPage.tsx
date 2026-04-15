@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
+import { useAudit } from '../hooks/useAudit'
 import { Staff } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -24,6 +25,7 @@ export default function StaffManagementPage() {
   const navigate = useNavigate()
   const { cafe } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
+  const { logAction } = useAudit()
 
   const [staffList, setStaffList] = useState<Staff[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -80,6 +82,11 @@ export default function StaffManagementPage() {
       
       if (error) throw error
       
+      await logAction('staff_created', {
+        staff_name: name,
+        permissions
+      })
+
       addToast(t('staff.staff_added'), "success")
       setShowAdd(false)
       setName('')
@@ -105,6 +112,11 @@ export default function StaffManagementPage() {
       
       if (error) throw error
       
+      await logAction('staff_deleted', {
+        staff_id: staffToDelete.id,
+        staff_name: staffToDelete.name
+      })
+
       addToast(t('staff.staff_deleted'), "success")
       setStaffToDelete(null)
       loadStaff()
@@ -123,6 +135,13 @@ export default function StaffManagementPage() {
         .eq('id', staff.id)
       
       if (error) throw error
+      
+      await logAction('staff_updated', {
+        staff_id: staff.id,
+        staff_name: staff.name,
+        active: !staff.active
+      })
+
       loadStaff()
       addToast(staff.active ? t('staff.staff_deactivated') : t('staff.staff_activated'), "success")
     } catch (error: any) {
@@ -152,6 +171,14 @@ export default function StaffManagementPage() {
       
       if (error) throw error
       
+      await logAction('staff_updated', {
+        staff_id: editingStaff.id,
+        staff_name: name,
+        permissions,
+        active: isActive,
+        pin_changed: pin.length === 4
+      })
+
       addToast(t('staff.staff_updated'), "success")
       setShowEdit(false)
       setEditingStaff(null)

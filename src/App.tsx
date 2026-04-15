@@ -21,6 +21,7 @@ import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import StaffManagementPage from './pages/StaffManagementPage'
 import ProductManagementPage from './pages/ProductManagementPage'
+import AuditLogPage from './pages/AuditLogPage'
 
 const PageTransition = ({ children }: { children: React.ReactNode }) => (
   <motion.div
@@ -187,6 +188,12 @@ function AppRoutes() {
         <Route path="/settings/staff" element={
           <AuthGuard requireOwner>
             <PageTransition><StaffManagementPage /></PageTransition>
+          </AuthGuard>
+        } />
+
+        <Route path="/settings/audit" element={
+          <AuthGuard requireOwner>
+            <PageTransition><AuditLogPage /></PageTransition>
           </AuthGuard>
         } />
 

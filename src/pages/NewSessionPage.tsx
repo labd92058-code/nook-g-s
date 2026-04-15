@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
+import { useAudit } from '../hooks/useAudit'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Session } from '../types'
@@ -18,6 +19,7 @@ export default function NewSessionPage() {
   const { cafe, staff, type } = useAuthStore()
   const { activeSessions } = useSessionStore()
   const addToast = useUIStore((state) => state.addToast)
+  const { logAction } = useAudit()
 
   const [isLoading, setIsLoading] = useState(false)
   const [customerName, setCustomerName] = useState('')
@@ -77,6 +79,12 @@ export default function NewSessionPage() {
         })
       
       if (error) throw error
+
+      await logAction('session_started', {
+        customer_name: customerName,
+        seat_number: selectedSeat,
+        rate_per_hour: rate
+      })
 
       addToast(`Session démarrée — Place ${selectedSeat}`, "success")
       navigate('/dashboard')

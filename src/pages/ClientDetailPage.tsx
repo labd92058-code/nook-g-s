@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
+import { useAudit } from '../hooks/useAudit'
 import { ClientAccount, Session, BalanceTransaction } from '../types'
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
@@ -24,6 +25,7 @@ export default function ClientDetailPage() {
   const navigate = useNavigate()
   const { cafe, staff, type } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
+  const { logAction } = useAudit()
 
   const [client, setClient] = useState<ClientAccount | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
@@ -101,6 +103,14 @@ export default function ClientDetailPage() {
         })
       
       if (transError) throw transError
+
+      await logAction('client_recharged', {
+        client_id: client.id,
+        client_name: client.name,
+        amount: rechargeAmount,
+        new_balance: newBalance,
+        reference: rechargeRef || 'Recharge manuelle'
+      })
 
       addToast(`Compte rechargé de ${rechargeAmount.toFixed(2)} DH`, "success")
       setShowRecharge(false)

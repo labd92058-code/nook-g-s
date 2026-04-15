@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
+import { useAudit } from '../hooks/useAudit'
 import { Product } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -21,6 +22,7 @@ export default function ProductManagementPage() {
   const navigate = useNavigate()
   const { cafe } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
+  const { logAction } = useAudit()
 
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -69,6 +71,12 @@ export default function ProductManagementPage() {
       
       if (error) throw error
       
+      await logAction('product_added', {
+        product_name: name,
+        price,
+        category
+      })
+
       addToast(t('settings.product_added'), "success")
       setShowAdd(false)
       setName('')
@@ -91,6 +99,13 @@ export default function ProductManagementPage() {
         .eq('id', product.id)
       
       if (error) throw error
+      
+      await logAction('product_updated', {
+        product_id: product.id,
+        product_name: product.name,
+        active: !product.active
+      })
+
       loadProducts()
       addToast(product.active ? t('settings.product_deactivated') : t('settings.product_activated'), "success")
     } catch (error: any) {
@@ -108,6 +123,11 @@ export default function ProductManagementPage() {
       
       if (error) throw error
       
+      await logAction('product_deleted', {
+        product_id: productToDelete.id,
+        product_name: productToDelete.name
+      })
+
       addToast(t('settings.product_deleted'), "success")
       setProductToDelete(null)
       loadProducts()

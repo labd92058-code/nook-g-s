@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'motion/react'
 import { 
   Store, DollarSign, Bell, ShoppingBag, Users, 
   Key, Globe, User, LogOut, ChevronDown, 
-  ChevronRight, Copy, RefreshCw, Check
+  ChevronRight, Copy, RefreshCw, Check, Activity
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation, useLanguageStore } from '../i18n'
+import { useAudit } from '../hooks/useAudit'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { BottomNav } from '../components/layout/BottomNav'
@@ -21,6 +22,7 @@ export default function SettingsPage() {
   const navigate = useNavigate()
   const { cafe, owner, logout, setCafe } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
+  const { logAction } = useAudit()
 
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showLogout, setShowLogout] = useState(false)
@@ -42,6 +44,12 @@ export default function SettingsPage() {
         .single()
       
       if (error) throw error
+      
+      await logAction('cafe_updated', {
+        name: cafeName,
+        phone
+      })
+
       setCafe(data)
       addToast("Informations mises à jour", "success")
     } catch (error: any) {
@@ -76,6 +84,7 @@ export default function SettingsPage() {
     )},
     { id: 'products', icon: ShoppingBag, title: t('settings.product_catalog'), onClick: () => navigate('/settings/products') },
     { id: 'staff', icon: Users, title: t('settings.team'), onClick: () => navigate('/settings/staff') },
+    { id: 'audit', icon: Activity, title: t('settings.audit_log'), onClick: () => navigate('/settings/audit') },
     { id: 'invite', icon: Key, title: t('settings.invite_code'), content: (
       <div className="space-y-4 pt-4">
         <div className="bg-black/25 border border-border rounded-xl p-4 flex items-center justify-center gap-4">
