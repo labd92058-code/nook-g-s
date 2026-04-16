@@ -84,7 +84,6 @@ export default function SettingsPage() {
     )},
     { id: 'products', icon: ShoppingBag, title: t('settings.product_catalog'), onClick: () => navigate('/settings/products') },
     { id: 'staff', icon: Users, title: t('settings.team'), onClick: () => navigate('/settings/staff') },
-    { id: 'audit', icon: Activity, title: t('settings.audit_log'), onClick: () => navigate('/settings/audit') },
     { id: 'invite', icon: Key, title: t('settings.invite_code'), content: (
       <div className="space-y-4 pt-4">
         <div className="bg-black/25 border border-border rounded-xl p-4 flex items-center justify-center gap-4">
@@ -99,10 +98,6 @@ export default function SettingsPage() {
             <Copy size={18} />
           </button>
         </div>
-        <Button variant="ghost" className="w-full border-error/20 text-error hover:bg-error/5">
-          <RefreshCw size={16} />
-          Régénérer le code
-        </Button>
       </div>
     )},
     { id: 'lang', icon: Globe, title: t('settings.language'), content: (
