@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
   ChevronLeft, Search, Filter, Banknote, CreditCard, 
-  Wallet, Gift, Clock, Calendar, ChevronRight
+  Wallet, Gift, Clock, Calendar, ChevronRight, Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -14,6 +14,7 @@ import { fr } from 'date-fns/locale'
 import { TopBar } from '../components/layout/TopBar'
 import { BottomNav } from '../components/layout/BottomNav'
 import { Input } from '../components/ui/Input'
+import { BottomSheet } from '../components/ui/BottomSheet'
 
 export default function SessionHistoryPage() {
   const { t } = useTranslation()
@@ -25,6 +26,8 @@ export default function SessionHistoryPage() {
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('today')
   const [customDate, setCustomDate] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'completed' | 'cancelled' | 'all'>('completed')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
     const loadSessions = async () => {
@@ -35,8 +38,13 @@ export default function SessionHistoryPage() {
         .from('sessions')
         .select('*')
         .eq('cafe_id', cafe.id)
-        .eq('status', 'completed')
         .order('ended_at', { ascending: false })
+      
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter)
+      } else {
+        query = query.in('status', ['completed', 'cancelled'])
+      }
       
       if (period === 'today') {
         query = query.gte('ended_at', startOfDay(new Date()).toISOString())
@@ -57,7 +65,7 @@ export default function SessionHistoryPage() {
     }
 
     loadSessions()
-  }, [cafe, period, customDate])
+  }, [cafe, period, customDate, statusFilter])
 
   const filteredSessions = sessions.filter(s => 
     s.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -65,7 +73,7 @@ export default function SessionHistoryPage() {
   )
 
   const groupedSessions = filteredSessions.reduce((acc: Record<string, Session[]>, session) => {
-    const date = format(new Date(session.ended_at!), 'yyyy-MM-dd')
+    const date = format(new Date(session.ended_at || session.started_at), 'yyyy-MM-dd')
     if (!acc[date]) acc[date] = []
     acc[date].push(session)
     return acc
@@ -95,47 +103,52 @@ export default function SessionHistoryPage() {
       <main className="pt-20 px-4 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-text">{t('dashboard.history')}</h1>
-        </div>
-
-        {/* Period Filter */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {[
-            { id: 'today', label: t('common.today') },
-            { id: 'week', label: t('common.thisWeek') },
-            { id: 'month', label: t('common.thisMonth') },
-            { id: 'all', label: t('common.all') },
-            { id: 'custom', label: t('reports.custom_date') },
-          ].map(p => (
-            <button
-              key={p.id}
-              onClick={() => setPeriod(p.id as any)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                period === p.id 
-                  ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
-                  : 'bg-surface2 text-text3 border-border hover:border-text3'
-              }`}
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsFilterOpen(true)}
+              className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text2 hover:text-text transition-colors relative"
             >
-              {p.label}
+              <Filter size={18} />
+              {(period !== 'today' || statusFilter !== 'completed') && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full" />
+              )}
             </button>
-          ))}
+            <button 
+              onClick={() => {
+                const searchInput = document.getElementById('history-search')
+                if (searchInput) {
+                  if (searchInput.style.height === '0px' || !searchInput.style.height) {
+                    searchInput.style.height = '44px'
+                    searchInput.style.opacity = '1'
+                    searchInput.style.marginBottom = '16px'
+                    setTimeout(() => searchInput.querySelector('input')?.focus(), 50)
+                  } else {
+                    searchInput.style.height = '0px'
+                    searchInput.style.opacity = '0'
+                    searchInput.style.marginBottom = '0px'
+                    setSearch('')
+                  }
+                }
+              }}
+              className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text2 hover:text-text transition-colors"
+            >
+              <Search size={18} />
+            </button>
+          </div>
         </div>
 
-        <AnimatePresence>
-          {period === 'custom' && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div 
+          id="history-search" 
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{ height: 0, opacity: 0, marginBottom: 0 }}
+        >
+          <Input
+            placeholder={t('reports.search_placeholder')}
+            icon={<Search size={16} />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
 
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-3">
@@ -159,15 +172,7 @@ export default function SessionHistoryPage() {
           </div>
         </div>
 
-        {/* Search */}
-        <Input
-          placeholder={t('reports.search_placeholder')}
-          icon={<Search size={16} />}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
 
-        {/* History List */}
         <div className="space-y-8">
           {Object.entries(groupedSessions).map(([date, daySessions]: [string, any]) => (
             <div key={date} className="space-y-3">
@@ -226,6 +231,89 @@ export default function SessionHistoryPage() {
       </main>
 
       <BottomNav />
+
+      <BottomSheet
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        title={t('common.filters') || 'Filtres'}
+      >
+        <div className="space-y-6">
+          {/* Period Filter */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">Par date</h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'today', label: t('common.today') },
+                { id: 'week', label: t('common.thisWeek') },
+                { id: 'month', label: t('common.thisMonth') },
+                { id: 'all', label: t('common.all') },
+                { id: 'custom', label: t('reports.custom_date') },
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setPeriod(p.id as any)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
+                    period === p.id 
+                      ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
+                      : 'bg-surface2 text-text3 border-border hover:border-text3'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {period === 'custom' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden pt-2"
+                >
+                  <Input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Status Filter */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">Par statut</h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'all', label: 'Tous' },
+                { id: 'completed', label: 'Terminées' },
+                { id: 'cancelled', label: 'Annulées' },
+              ].map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setStatusFilter(s.id as any)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
+                    statusFilter === s.id 
+                      ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
+                      : 'bg-surface2 text-text3 border-border hover:border-text3'
+                  }`}
+                >
+                  {statusFilter === s.id && <Check size={14} />}
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsFilterOpen(false)}
+            className="w-full h-12 bg-gradient-to-br from-accent to-[#ea6b0a] text-white font-bold rounded-xl shadow-[0_2px_12px_rgba(249,115,22,0.25)] mt-4 active:scale-[0.98] transition-all"
+          >
+            {t('common.apply') || 'Appliquer'}
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   )
 }

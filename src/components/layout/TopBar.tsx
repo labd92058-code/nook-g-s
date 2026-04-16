@@ -1,12 +1,11 @@
-import { Bell, LogOut, User } from 'lucide-react'
+import { LogOut, Plus } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { supabase } from '../../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { Avatar } from '../ui/Avatar'
 import { GlobalSearch } from './GlobalSearch'
 
 export const TopBar = () => {
-  const { type, owner, staff, cafe, logout } = useAuthStore()
+  const { type, cafe, logout } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -18,38 +17,31 @@ export const TopBar = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
+    <header className="fixed top-0 left-0 right-0 h-14 z-[100] flex items-center justify-between px-4">
+      {/* Background with backdrop-blur moved to an absolute child to prevent containing block issues for fixed children */}
+      <div className="absolute inset-0 bg-bg/90 backdrop-blur-xl border-b border-border -z-10" />
+      
       <div className="flex items-center gap-2">
-        {type === 'owner' ? (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center text-white font-bold text-[10px]">N</div>
-            <span className="text-sm font-bold text-text">Nook OS</span>
-          </div>
-        ) : (
-          <span className="text-sm font-semibold text-text">{cafe?.name}</span>
-        )}
+        <img src="/favicon.svg" alt="Nook OS" className="w-6 h-6 drop-shadow-sm" />
+        <span className="text-sm font-bold text-text hidden sm:inline-block">Nook OS</span>
       </div>
 
-      <div className="text-[11px] font-medium text-text3 uppercase tracking-wider">
-        {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+      <div className="text-sm font-semibold text-text absolute left-1/2 -translate-x-1/2 max-w-[150px] sm:max-w-[200px] truncate text-center">
+        {cafe?.name}
       </div>
 
       <div className="flex items-center gap-1">
         <GlobalSearch />
-        {type === 'owner' ? (
-          <>
-            <button className="relative p-2 text-text3 hover:text-text transition-colors">
-              <Bell size={18} />
-              <div className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-bg" />
-            </button>
-            <div className="ml-2">
-              <Avatar name={owner?.user_metadata?.full_name || 'Owner'} size="sm" />
-            </div>
-          </>
-        ) : (
+        <button 
+          onClick={() => navigate('/sessions/new')}
+          className="w-8 h-8 ml-2 flex items-center justify-center rounded-full bg-accent text-white hover:bg-accent2 transition-colors shadow-[0_2px_10px_rgba(249,115,22,0.3)]"
+        >
+          <Plus size={18} />
+        </button>
+        {type === 'staff' && (
           <button 
             onClick={handleLogout}
-            className="p-2 text-text3 hover:text-error transition-colors"
+            className="p-2 ml-1 text-text3 hover:text-error transition-colors"
           >
             <LogOut size={18} />
           </button>

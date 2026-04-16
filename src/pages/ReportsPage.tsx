@@ -65,6 +65,20 @@ export default function ReportsPage() {
     }, {})
   }
 
+  const itemSales = sessions.reduce((acc: Record<string, {name: string, qty: number}>, s) => {
+    if (Array.isArray(s.extras)) {
+      s.extras.forEach((extra: any) => {
+        if (!acc[extra.id]) {
+          acc[extra.id] = { name: extra.name, qty: 0 }
+        }
+        acc[extra.id].qty += extra.qty
+      })
+    }
+    return acc
+  }, {})
+
+  const bestSellingItem = (Object.values(itemSales) as {name: string, qty: number}[]).sort((a, b) => b.qty - a.qty)[0]
+
   // Chart Data
   const chartData = sessions.reduce((acc: any[], s) => {
     const date = format(new Date(s.ended_at!), 'dd/MM')
@@ -113,54 +127,39 @@ export default function ReportsPage() {
           ))}
         </div>
 
-        {/* Revenue Card */}
-        <div className="p-6 rounded-2xl border border-accent-border bg-linear-to-br from-accent/10 to-transparent">
-          <div className="text-[10px] font-bold text-accent2 uppercase tracking-widest mb-2">{t('reports.revenue')}</div>
-          <div className="text-4xl font-mono font-extrabold text-text mb-6">
-            {stats.revenue.toFixed(2)} <span className="text-xl text-text3">DH</span>
-          </div>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2 text-text2 text-xs">
-              <Activity className="text-text3" size={14} />
-              {stats.count} {t('reports.sessions')}
+        {/* Basic Analytics Grid */}
+        <div className="grid grid-cols-2 gap-3 sticky top-14 pt-2 pb-2 bg-bg z-50">
+          <div className="bg-surface border border-border p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-2 text-text3 text-[10px] font-bold uppercase tracking-widest mb-1">
+              <Banknote size={12} className="text-accent" />
+              Revenu Total
             </div>
-            <div className="flex items-center gap-2 text-text2 text-xs">
-              <Clock className="text-text3" size={14} />
-              {stats.avgDuration} {t('reports.avg_duration')}
+            <div className="text-xl font-mono font-bold text-accent2">{stats.revenue.toFixed(2)} DH</div>
+          </div>
+          <div className="bg-surface border border-border p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-2 text-text3 text-[10px] font-bold uppercase tracking-widest mb-1">
+              <Activity size={12} className="text-text2" />
+              Commandes
+            </div>
+            <div className="text-xl font-mono font-bold text-text">{stats.count}</div>
+          </div>
+          <div className="bg-surface border border-border p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-2 text-text3 text-[10px] font-bold uppercase tracking-widest mb-1">
+              <Clock size={12} className="text-text2" />
+              Durée Moy.
+            </div>
+            <div className="text-xl font-mono font-bold text-text">{stats.avgDuration} min</div>
+          </div>
+          <div className="bg-surface border border-border p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-2 text-text3 text-[10px] font-bold uppercase tracking-widest mb-1">
+              <TrendingUp size={12} className="text-text2" />
+              Top Article
+            </div>
+            <div className="text-sm font-bold text-text truncate mt-1">
+              {bestSellingItem ? `${bestSellingItem.name} (${bestSellingItem.qty})` : '-'}
             </div>
           </div>
         </div>
-
-        {/* Chart */}
-        <section className="space-y-4">
-          <h3 className="text-sm font-bold text-text">Évolution du revenu</h3>
-          <div className="h-64 bg-surface border border-border rounded-2xl p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2d45" vertical={false} />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#475569" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <YAxis 
-                  stroke="#475569" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip 
-                  cursor={{ fill: 'rgba(249,115,22,0.05)' }}
-                  contentStyle={{ backgroundColor: '#111827', border: '1px solid #1f2d45', borderRadius: '8px', fontSize: '12px' }}
-                />
-                <Bar dataKey="revenue" fill="#f97316" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
 
         {/* Payment Breakdown */}
         <section className="space-y-4">

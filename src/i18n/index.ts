@@ -32,11 +32,11 @@ export const useTranslation = () => {
     let current: any = translations[language]
     
     for (const k of keys) {
-      if (current[k] === undefined) {
-        // Fallback to French if key missing in English
+      if (!current || current[k] === undefined) {
+        // Fallback to French if key missing in current language
         let fallback: any = translations['fr']
         for (const fk of keys) {
-          if (fallback[fk] === undefined) return key
+          if (!fallback || fallback[fk] === undefined) return key
           fallback = fallback[fk]
         }
         return fallback

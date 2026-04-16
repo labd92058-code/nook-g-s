@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { User, Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUIStore } from '../stores/uiStore'
-import { useTranslation } from '../i18n'
+import { useTranslation, useLanguageStore } from '../i18n'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 
@@ -60,6 +60,27 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-bg relative overflow-hidden">
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+
+      {/* Top Bar */}
+      <div className="absolute top-0 left-0 right-0 p-5 flex items-center justify-between z-20">
+        <button 
+          onClick={() => navigate('/login')}
+          className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text2 hover:text-text transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <button 
+          onClick={() => {
+            const { language, setLanguage } = useLanguageStore.getState()
+            setLanguage(language === 'fr' ? 'en' : 'fr')
+          }}
+          className="flex items-center px-3 py-1.5 rounded-full bg-surface/50 border border-border text-xs font-bold tracking-wide transition-colors"
+        >
+          <span className={useLanguageStore().language === 'fr' ? 'text-accent' : 'text-text3'}>FR</span>
+          <span className="text-text3 mx-1.5 font-medium">/</span>
+          <span className={useLanguageStore().language === 'en' ? 'text-accent' : 'text-text3'}>EN</span>
+        </button>
+      </div>
 
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}

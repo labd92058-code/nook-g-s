@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { 
   ChevronLeft, MoreVertical, Clock, Gauge, AlertCircle, 
   ShoppingBag, Plus, StopCircle, Edit2, Trash2, CheckCircle,
-  Banknote, CreditCard, Wallet, Gift, Loader2
+  Banknote, CreditCard, Wallet, Gift, Loader2, Phone
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -76,8 +76,8 @@ export default function SessionDetailPage() {
     if (!session) return
     const update = () => {
       const start = new Date(session.started_at).getTime()
-      const now = new Date().getTime()
-      const diffMs = now - start
+      const end = session.status === 'completed' && session.ended_at ? new Date(session.ended_at).getTime() : new Date().getTime()
+      const diffMs = end - start
       
       const hours = Math.floor(diffMs / 3600000)
       const minutes = Math.floor((diffMs % 3600000) / 60000)
@@ -85,14 +85,20 @@ export default function SessionDetailPage() {
       
       setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
       
-      const durationHours = diffMs / 3600000
-      setTimeCost(durationHours * session.rate_per_hour)
+      if (session.status === 'completed') {
+        setTimeCost(session.time_cost || 0)
+      } else {
+        const durationHours = diffMs / 3600000
+        setTimeCost(durationHours * session.rate_per_hour)
+      }
       if (hours >= 3) setIsLong(true)
     }
 
     update()
-    const interval = setInterval(update, 1000)
-    return () => clearInterval(interval)
+    if (session.status !== 'completed') {
+      const interval = setInterval(update, 1000)
+      return () => clearInterval(interval)
+    }
   }, [session])
 
   const handleAddExtras = async () => {
@@ -219,9 +225,7 @@ export default function SessionDetailPage() {
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">Place {session.seat_number}</h1>
-        <button className="p-2 -mr-2 text-text3 hover:text-text">
-          <MoreVertical size={20} />
-        </button>
+        <div className="w-8" /> {/* Spacer to keep title centered */}
       </header>
 
       <main className="pt-20 px-4 space-y-6">
@@ -233,9 +237,15 @@ export default function SessionDetailPage() {
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-accent to-transparent opacity-50" />
           
-          <div className="text-xs font-bold text-accent uppercase tracking-widest mb-2">{session.customer_name}</div>
+          <div className="text-xs font-bold text-accent uppercase tracking-widest mb-1">{session.customer_name}</div>
+          {session.customer_phone && (
+            <div className="text-[11px] text-text3 font-medium mb-4 flex items-center justify-center gap-1.5">
+              <Phone size={12} />
+              {session.customer_phone}
+            </div>
+          )}
           <motion.div 
-            animate={{ scale: [1, 1.02, 1] }}
+            animate={session.status === 'active' ? { scale: [1, 1.02, 1] } : {}}
             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
             className="text-6xl font-mono font-black text-text tracking-tighter mb-6 drop-shadow-glow"
           >
@@ -253,7 +263,28 @@ export default function SessionDetailPage() {
             </div>
           </div>
 
-          {isLong && (
+          {session.status === 'completed' && (
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="mt-6 px-4 py-2 bg-success/10 border border-success/20 rounded-full flex items-center gap-2 text-success text-[10px] font-black uppercase tracking-widest"
+            >
+              <CheckCircle size={12} />
+              Terminée
+            </motion.div>
+          )}
+          {session.status === 'cancelled' && (
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="mt-6 px-4 py-2 bg-error/10 border border-error/20 rounded-full flex items-center gap-2 text-error text-[10px] font-black uppercase tracking-widest"
+            >
+              <AlertCircle size={12} />
+              Annulée
+            </motion.div>
+          )}
+
+          {isLong && session.status !== 'completed' && session.status !== 'cancelled' && (
             <motion.div 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -313,7 +344,7 @@ export default function SessionDetailPage() {
                         {(extra.price * extra.qty).toFixed(2)} DH
                       </div>
                     </div>
-                    {type === 'owner' && (
+                    {type === 'owner' && session.status === 'active' && (
                       <button 
                         onClick={() => setItemToRemove(i)}
                         className="p-2 -mr-2 text-text3 hover:text-error transition-colors opacity-0 group-hover:opacity-100"
@@ -334,27 +365,31 @@ export default function SessionDetailPage() {
           </div>
         </section>
 
-        <button
-          onClick={() => setShowExtras(true)}
-          className="w-full py-5 bg-surface2 border border-dashed border-border rounded-2xl flex items-center justify-center gap-3 text-text3 hover:text-accent hover:border-accent hover:bg-accent/5 transition-all group"
-        >
-          <div className="w-8 h-8 rounded-full bg-bg flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors">
-            <Plus size={18} />
-          </div>
-          <span className="text-sm font-bold uppercase tracking-widest">{t('sessions.add_extra')}</span>
-        </button>
+        {session.status === 'active' && (
+          <button
+            onClick={() => setShowExtras(true)}
+            className="w-full py-5 bg-surface2 border border-dashed border-border rounded-2xl flex items-center justify-center gap-3 text-text3 hover:text-accent hover:border-accent hover:bg-accent/5 transition-all group"
+          >
+            <div className="w-8 h-8 rounded-full bg-bg flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors">
+              <Plus size={18} />
+            </div>
+            <span className="text-sm font-bold uppercase tracking-widest">{t('sessions.add_extra')}</span>
+          </button>
+        )}
       </main>
 
       {/* Bottom Action */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-bg via-bg to-transparent pt-12">
-        <Button
-          onClick={() => setShowEnd(true)}
-          className="w-full h-14 text-lg bg-linear-to-br from-error to-[#dc2626] shadow-error/30"
-        >
-          <StopCircle size={20} />
-          {t('sessions.end')}
-        </Button>
-      </div>
+      {session.status === 'active' && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-bg via-bg to-transparent pt-12">
+          <Button
+            onClick={() => setShowEnd(true)}
+            className="w-full h-14 text-lg bg-linear-to-br from-error to-[#dc2626] shadow-error/30"
+          >
+            <StopCircle size={20} />
+            {t('sessions.end')}
+          </Button>
+        </div>
+      )}
 
       {/* Extras Sheet */}
       <BottomSheet isOpen={showExtras} onClose={() => setShowExtras(false)} title="Consommations">

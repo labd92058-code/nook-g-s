@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, User, Phone, Armchair, Clock, Zap, Sliders, Play, Loader2, MessageSquare, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -16,14 +16,18 @@ import { format } from 'date-fns'
 export default function NewSessionPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
+  const state = location.state as { clientName?: string, clientPhone?: string, clientId?: string } | null
+
   const { cafe, staff, type } = useAuthStore()
   const { activeSessions } = useSessionStore()
   const addToast = useUIStore((state) => state.addToast)
   const { logAction } = useAudit()
 
   const [isLoading, setIsLoading] = useState(false)
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerName, setCustomerName] = useState(state?.clientName || '')
+  const [customerPhone, setCustomerPhone] = useState(state?.clientPhone || '')
+  const [clientId, setClientId] = useState(state?.clientId || null)
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null)
   const [rateType, setRateType] = useState<'standard' | 'premium' | 'custom'>('standard')
   const [customRate, setCustomRate] = useState<number>(0)
@@ -69,6 +73,7 @@ export default function NewSessionPage() {
         .insert({
           cafe_id: cafe.id,
           staff_id: type === 'staff' ? staff?.id : null,
+          client_account_id: clientId,
           customer_name: customerName,
           customer_phone: customerPhone || null,
           seat_number: selectedSeat,

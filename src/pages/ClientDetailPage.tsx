@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { 
   ChevronLeft, MoreVertical, Phone, MessageCircle, 
   PlusCircle, BarChart, TrendingUp, Calendar, 
-  Clock, Banknote, Wallet, Loader2
+  Clock, Banknote, Wallet, Loader2, Play
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -166,6 +166,14 @@ export default function ClientDetailPage() {
             {client.balance.toFixed(2)} DH
           </div>
           
+          <Button 
+            className="w-full h-12 mb-3 bg-gradient-to-br from-accent to-[#ea6b0a] text-white shadow-[0_2px_12px_rgba(249,115,22,0.25)]"
+            onClick={() => navigate('/sessions/new', { state: { clientName: client.name, clientPhone: client.phone, clientId: client.id } })}
+          >
+            <Play size={18} className="fill-current" />
+            Démarrer une session
+          </Button>
+
           <div className="flex gap-3 w-full">
             <Button 
               className="flex-1 h-12 bg-success-dim border border-success/20 text-success shadow-none"
@@ -179,7 +187,7 @@ export default function ClientDetailPage() {
                 href={`https://wa.me/${client.phone.replace(/\s/g, '')}?text=Bonjour ${client.name}, votre solde Nook OS est de ${client.balance.toFixed(2)} DH.`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex-1 h-12 btn-ghost"
+                className="flex-1 h-12 btn-ghost flex items-center justify-center gap-2"
               >
                 <MessageCircle size={18} />
                 WhatsApp

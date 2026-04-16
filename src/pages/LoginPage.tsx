@@ -5,7 +5,7 @@ import { Store, Users, Mail, Lock, Eye, EyeOff, ArrowLeft, Loader2 } from 'lucid
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
-import { useTranslation } from '../i18n'
+import { useTranslation, useLanguageStore } from '../i18n'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { NumPad } from '../components/ui/NumPad'
@@ -151,6 +151,27 @@ export default function LoginPage() {
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
+      {/* Top Bar */}
+      <div className="absolute top-0 left-0 right-0 p-5 flex items-center justify-between z-20">
+        <button 
+          onClick={() => navigate('/')}
+          className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text2 hover:text-text transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <button 
+          onClick={() => {
+            const { language, setLanguage } = useLanguageStore.getState()
+            setLanguage(language === 'fr' ? 'en' : 'fr')
+          }}
+          className="flex items-center px-3 py-1.5 rounded-full bg-surface/50 border border-border text-xs font-bold tracking-wide transition-colors"
+        >
+          <span className={useLanguageStore().language === 'fr' ? 'text-accent' : 'text-text3'}>FR</span>
+          <span className="text-text3 mx-1.5 font-medium">/</span>
+          <span className={useLanguageStore().language === 'en' ? 'text-accent' : 'text-text3'}>EN</span>
+        </button>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -235,21 +256,58 @@ export default function LoginPage() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-text2 mb-3">{t('auth.cafe_code')}</label>
-                    <div className="flex justify-between gap-2">
+                    <div className="flex justify-between gap-1 sm:gap-2">
                       {Array.from({ length: 6 }).map((_, i) => (
                         <input
                           key={i}
                           type="text"
-                          maxLength={1}
-                          className="w-12 h-14 bg-black/25 border border-border rounded-lg text-center font-mono text-2xl font-bold text-text focus:border-accent outline-none"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          autoComplete={i === 0 ? "one-time-code" : "off"}
+                          maxLength={6}
+                          className="w-10 sm:w-12 h-14 bg-black/25 border border-border rounded-lg text-center font-mono text-xl sm:text-2xl font-bold text-text focus:border-accent outline-none transition-colors"
                           value={inviteCode[i] || ''}
+                          onFocus={(e) => e.target.select()}
+                          onPaste={(e) => {
+                            e.preventDefault()
+                            const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6)
+                            if (pasted) {
+                              setInviteCode(pasted)
+                              const inputs = e.currentTarget.parentElement?.querySelectorAll('input')
+                              const nextIndex = Math.min(pasted.length, 5)
+                              if (inputs && inputs[nextIndex]) {
+                                (inputs[nextIndex] as HTMLInputElement).focus()
+                              }
+                            }
+                          }}
                           onChange={(e) => {
                             const val = e.target.value.replace(/[^0-9]/g, '')
-                            if (val) {
-                              const newCode = inviteCode.split('')
-                              newCode[i] = val
-                              setInviteCode(newCode.join(''))
-                              if (i < 5) (e.target.nextSibling as HTMLInputElement)?.focus()
+                            
+                            if (val.length > 1) {
+                              if (val.length === 2 && val.startsWith(inviteCode[i] || '')) {
+                                const newChar = val.slice(1)
+                                const newCode = inviteCode.split('')
+                                newCode[i] = newChar
+                                setInviteCode(newCode.join(''))
+                                if (i < 5) (e.target.nextSibling as HTMLInputElement)?.focus()
+                                return
+                              }
+                              
+                              setInviteCode(val.slice(0, 6))
+                              const inputs = e.target.parentElement?.querySelectorAll('input')
+                              const nextIndex = Math.min(val.length, 5)
+                              if (inputs && inputs[nextIndex]) {
+                                (inputs[nextIndex] as HTMLInputElement).focus()
+                              }
+                              return
+                            }
+
+                            const newCode = inviteCode.split('')
+                            newCode[i] = val
+                            setInviteCode(newCode.join(''))
+                            
+                            if (val && i < 5) {
+                              (e.target.nextSibling as HTMLInputElement)?.focus()
                             }
                           }}
                           onKeyDown={(e) => {

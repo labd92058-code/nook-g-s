@@ -177,33 +177,6 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Quick Actions */}
-        <section className="space-y-4">
-          <h2 className="text-md font-bold text-text">{t('dashboard.quick_actions')}</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Link to="/sessions/new" className="flex flex-col items-center justify-center gap-2 h-24 bg-accent-glow border border-accent-border rounded-xl transition-all active:scale-95">
-              <PlusCircle size={24} className="text-accent2" />
-              <span className="text-xs font-bold text-text">{t('dashboard.start_session')}</span>
-            </Link>
-            <Link to="/sessions" className="flex flex-col items-center justify-center gap-2 h-24 bg-surface border border-border rounded-xl transition-all active:scale-95">
-              <List size={24} className="text-text2" />
-              <span className="text-xs font-bold text-text">{t('dashboard.history')}</span>
-            </Link>
-            {hasPermission('clients') && (
-              <Link to="/clients" className="flex flex-col items-center justify-center gap-2 h-24 bg-surface border border-border rounded-xl transition-all active:scale-95">
-                <Users size={24} className="text-text2" />
-                <span className="text-xs font-bold text-text">{t('dashboard.clients')}</span>
-              </Link>
-            )}
-            {hasPermission('reports') && (
-              <Link to="/reports" className="flex flex-col items-center justify-center gap-2 h-24 bg-surface border border-border rounded-xl transition-all active:scale-95">
-                <BarChart2 size={24} className="text-text2" />
-                <span className="text-xs font-bold text-text">{t('dashboard.reports')}</span>
-              </Link>
-            )}
-          </div>
-        </section>
-
         {/* Last Sessions */}
         {lastSessions.length > 0 && (
           <section className="space-y-4">

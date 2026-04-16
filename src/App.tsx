@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react'
 import { ToastContainer } from './components/ui/Toast'
 
 // Pages (to be created)
+import WelcomePage from './pages/WelcomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import WizardPage from './pages/WizardPage'
@@ -81,42 +82,50 @@ function AppRoutes() {
       
       // 1. Check Supabase Auth (Owner)
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setOwner(session.user)
-        const { data: cafe } = await supabase
-          .from('cafes')
-          .select('*')
-          .eq('owner_id', session.user.id)
-          .single()
-        
-        if (cafe) setCafe(cafe)
-      } else {
-        // 2. Check Local Storage (Staff)
-        const staffSession = localStorage.getItem('nook_staff_session')
-        if (staffSession) {
-          const parsed = JSON.parse(staffSession)
-          if (new Date(parsed.expires_at) > new Date()) {
-            const { data: staff } = await supabase
-              .from('staff')
-              .select('*')
-              .eq('id', parsed.staff_id)
-              .single()
-            
-            const { data: cafe } = await supabase
-              .from('cafes')
-              .select('*')
-              .eq('id', parsed.cafe_id)
-              .single()
+      
+      // Add minimum loading time for the splash screen effect
+      const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000))
+      
+      let authPromise = (async () => {
+        if (session?.user) {
+          setOwner(session.user)
+          const { data: cafe } = await supabase
+            .from('cafes')
+            .select('*')
+            .eq('owner_id', session.user.id)
+            .single()
+          
+          if (cafe) setCafe(cafe)
+        } else {
+          // 2. Check Local Storage (Staff)
+          const staffSession = localStorage.getItem('nook_staff_session')
+          if (staffSession) {
+            const parsed = JSON.parse(staffSession)
+            if (new Date(parsed.expires_at) > new Date()) {
+              const { data: staff } = await supabase
+                .from('staff')
+                .select('*')
+                .eq('id', parsed.staff_id)
+                .single()
+              
+              const { data: cafe } = await supabase
+                .from('cafes')
+                .select('*')
+                .eq('id', parsed.cafe_id)
+                .single()
 
-            if (staff && cafe) {
-              setStaff(staff)
-              setCafe(cafe)
+              if (staff && cafe) {
+                setStaff(staff)
+                setCafe(cafe)
+              }
+            } else {
+              localStorage.removeItem('nook_staff_session')
             }
-          } else {
-            localStorage.removeItem('nook_staff_session')
           }
         }
-      }
+      })();
+
+      await Promise.all([authPromise, minLoadTime])
       
       setLoading(false)
     }
@@ -212,7 +221,7 @@ function AppRoutes() {
           </AuthGuard>
         } />
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<PageTransition><WelcomePage /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   )
