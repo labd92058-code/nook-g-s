@@ -68,6 +68,25 @@ export default function WelcomePage() {
             {t('welcome.start_free')}
             <ArrowRight size={20} />
           </button>
+          
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2 text-sm">
+            <span className="text-text3">{t('auth.already_account')}</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => navigate('/login', { state: { defaultRole: 'owner' }})} 
+                className="text-accent hover:text-accent2 transition-colors font-semibold"
+              >
+                {t('auth.owner')}
+              </button>
+              <span className="text-border">•</span>
+              <button 
+                onClick={() => navigate('/login', { state: { defaultRole: 'staff' }})} 
+                className="text-accent hover:text-accent2 transition-colors font-semibold"
+              >
+                {t('auth.staff')}
+              </button>
+            </div>
+          </div>
         </motion.div>
 
         {/* Quick Proof */}
@@ -124,6 +143,25 @@ export default function WelcomePage() {
             {t('welcome.start_free')}
             <ArrowRight size={20} />
           </button>
+
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2 text-sm">
+            <span className="text-text3">{t('auth.already_account')}</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => navigate('/login', { state: { defaultRole: 'owner' }})} 
+                className="text-accent hover:text-accent2 transition-colors font-semibold"
+              >
+                {t('auth.owner')}
+              </button>
+              <span className="text-border">•</span>
+              <button 
+                onClick={() => navigate('/login', { state: { defaultRole: 'staff' }})} 
+                className="text-accent hover:text-accent2 transition-colors font-semibold"
+              >
+                {t('auth.staff')}
+              </button>
+            </div>
+          </div>
         </motion.div>
 
       </main>

@@ -73,6 +73,7 @@ export interface Database {
           id: string
           cafe_id: string
           name: string
+          phone: string | null
           pin_hash: string
           active: boolean
           permissions: Json
@@ -83,6 +84,7 @@ export interface Database {
           id?: string
           cafe_id: string
           name: string
+          phone?: string | null
           pin_hash: string
           active?: boolean
           permissions?: Json
@@ -93,6 +95,7 @@ export interface Database {
           id?: string
           cafe_id?: string
           name?: string
+          phone?: string | null
           pin_hash?: string
           active?: boolean
           permissions?: Json

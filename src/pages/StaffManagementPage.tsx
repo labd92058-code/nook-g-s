@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { 
   ChevronLeft, Plus, User, Key, Timer, 
   BarChart2, Users, Settings, Trash2, Loader2, Check,
-  Search, Filter, Power, DollarSign
+  Search, Filter, Power, DollarSign, Lock, MessageCircle, Phone
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -41,6 +41,7 @@ export default function StaffManagementPage() {
 
   // New Staff Form
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [pin, setPin] = useState('')
   const [permissions, setPermissions] = useState({
     sessions: true,
@@ -77,6 +78,7 @@ export default function StaffManagementPage() {
         .insert({
           cafe_id: cafe.id,
           name,
+          phone: phone || null,
           pin_hash: pinHash,
           permissions,
           active: true
@@ -92,6 +94,7 @@ export default function StaffManagementPage() {
       addToast(t('staff.staff_added'), "success")
       setShowAdd(false)
       setName('')
+      setPhone('')
       setPin('')
       setPermissions({ sessions: true, reports: false, clients: false, settings: false, rates: false })
       setIsActive(true)
@@ -157,6 +160,7 @@ export default function StaffManagementPage() {
     try {
       const updateData: any = {
         name,
+        phone: phone || null,
         permissions,
         active: isActive
       }
@@ -185,6 +189,7 @@ export default function StaffManagementPage() {
       setShowEdit(false)
       setEditingStaff(null)
       setName('')
+      setPhone('')
       setPin('')
       setPermissions({ sessions: true, reports: false, clients: false, settings: false, rates: false })
       setIsActive(true)
@@ -199,6 +204,7 @@ export default function StaffManagementPage() {
   const openEdit = (staff: Staff) => {
     setEditingStaff(staff)
     setName(staff.name)
+    setPhone(staff.phone || '')
     setPermissions(staff.permissions as any)
     setIsActive(staff.active)
     setPin('')
@@ -301,7 +307,10 @@ export default function StaffManagementPage() {
             </div>
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => openEdit(staff)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEdit(staff)
+                }}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase transition-colors ${
                   staff.active ? 'bg-success-dim text-success hover:bg-success/20' : 'bg-surface2 text-text3 hover:bg-surface3'
                 }`}
@@ -309,15 +318,22 @@ export default function StaffManagementPage() {
                 {staff.active ? t('staff.active') : t('staff.inactive')}
               </button>
               <button 
-                onClick={() => toggleStaffActive(staff)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleStaffActive(staff)
+                }}
                 className={`p-2 rounded-lg transition-colors ${staff.active ? 'text-success hover:bg-success/10' : 'text-text3 hover:bg-surface2'}`}
                 title={staff.active ? t('staff.deactivate') : t('staff.activate')}
               >
                 <Power size={18} />
               </button>
               <button 
-                onClick={() => setStaffToDelete(staff)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setStaffToDelete(staff)
+                }}
                 className="p-2 text-text3 hover:text-error transition-colors"
+                title={t('staff.delete')}
               >
                 <Trash2 size={18} />
               </button>
@@ -348,13 +364,23 @@ export default function StaffManagementPage() {
         }} 
         title={showEdit ? t('staff.edit_staff') : t('staff.add')}
       >
-        <div className="space-y-8 pt-4">
-          <Input
-            placeholder={t('staff.name')}
-            icon={<User size={18} />}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <div className="space-y-6 pt-4">
+          <div className="space-y-4">
+            <Input
+              placeholder={t('staff.name')}
+              icon={<User size={18} />}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            
+            <Input
+              placeholder="Téléphone (ex: +2126...)"
+              icon={<Phone size={18} />}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              type="tel"
+            />
+          </div>
 
           {showEdit && !pin && (
             <div className="bg-surface2 p-4 rounded-xl border border-border flex items-center justify-between">
@@ -363,7 +389,7 @@ export default function StaffManagementPage() {
                   <Key size={18} />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-text">Code PIN</div>
+                  <div className="text-sm font-bold text-text">{t('auth.password')}</div>
                   <div className="text-[12px] text-text3 tracking-[0.2em] font-mono">****</div>
                 </div>
               </div>
@@ -374,26 +400,48 @@ export default function StaffManagementPage() {
           )}
 
           {(!showEdit || pin) && (
-            <div className="flex flex-col items-center gap-4">
+            <div className="space-y-2">
               <label className="text-xs font-bold text-text3 uppercase tracking-widest">
                 {showEdit ? t('staff.new_pin') : t('staff.pin_setup')}
               </label>
-              <PINDots length={pin === ' ' ? 0 : pin.length} />
-              <NumPad
-                onPress={(v) => {
-                  if (pin === ' ') setPin(v);
-                  else if (pin.length < 4) setPin(pin + v);
-                }}
-                onDelete={() => {
-                  if (pin.length > 1 && pin !== ' ') setPin(pin.slice(0, -1));
-                  else setPin(' ');
-                }}
-                className="w-full"
-              />
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-text3">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  value={pin === ' ' ? '' : pin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '')
+                    setPin(val)
+                  }}
+                  placeholder={t('auth.password')}
+                  className="input pl-11"
+                />
+              </div>
               {showEdit && pin && (
                 <Button variant="ghost" size="sm" onClick={() => setPin('')}>
                   {t('common.cancel')}
                 </Button>
+              )}
+              
+              {pin.length === 4 && phone && name && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                  <Button 
+                    type="button"
+                    onClick={() => {
+                      const msg = `Bienvenue dans Nook OS ! 👋\n\nTon profil a été complété. Voici tes accès:\n\nNom d'utilisateur: *${name}*\nCode Café: *${cafe?.invite_code || ''}*\nCode PIN: *${pin}*\n\nLien: https://nookos.ma`
+                      window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')
+                    }}
+                    className="w-full mt-2 bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 hover:bg-[#25D366]/20"
+                  >
+                    <MessageCircle size={18} />
+                    Envoyer les accès via WhatsApp
+                  </Button>
+                </motion.div>
               )}
             </div>
           )}
@@ -462,13 +510,32 @@ export default function StaffManagementPage() {
           </div>
 
           <Button 
-            className="w-full h-14" 
+            className="w-full h-14 mt-4" 
             onClick={showEdit ? handleUpdateStaff : handleAddStaff}
             isLoading={isSaving}
             disabled={!name || (!showEdit && pin.length < 4) || (showEdit && pin && pin !== ' ' && pin.length < 4)}
           >
             {showEdit ? t('staff.save') : t('staff.create')}
           </Button>
+
+          {showEdit && (
+            <div className="mt-8 pt-6 border-t border-border">
+              <label className="text-[10px] font-bold text-error uppercase tracking-widest mb-4 block">
+                Zone de danger
+              </label>
+              <Button
+                variant="danger"
+                className="w-full h-14"
+                onClick={() => {
+                  setStaffToDelete(editingStaff)
+                  setShowEdit(false)
+                }}
+              >
+                <Trash2 size={18} />
+                {t('staff.delete')}
+              </Button>
+            </div>
+          )}
         </div>
       </BottomSheet>
 

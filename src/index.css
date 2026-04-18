@@ -64,6 +64,10 @@
 }
 
 @layer components {
+  button:not(.btn-primary):not(.btn-ghost):not(.btn-danger) {
+    @apply transition-all active:scale-95;
+  }
+
   .card {
     @apply bg-surface border border-border rounded-xl p-4;
   }
@@ -77,14 +81,14 @@
   }
 
   .btn-primary {
-    @apply bg-linear-to-br from-accent to-[#ea6b0a] text-white font-semibold rounded-lg h-11 px-4 flex items-center justify-center gap-2 shadow-lg shadow-accent/30 transition-all active:scale-97;
+    @apply bg-linear-to-br from-accent to-[#ea6b0a] text-white font-semibold rounded-lg h-11 px-4 flex items-center justify-center gap-2 shadow-lg shadow-accent/30 transition-all hover:brightness-110 active:brightness-90 active:scale-95;
   }
 
   .btn-ghost {
-    @apply bg-transparent border border-border text-text2 rounded-lg h-11 px-4 flex items-center justify-center gap-2 transition-all hover:bg-white/5 active:scale-97;
+    @apply bg-transparent border border-border text-text2 rounded-lg h-11 px-4 flex items-center justify-center gap-2 transition-all hover:bg-white/10 hover:text-text active:bg-white/5 active:scale-95;
   }
 
   .btn-danger {
-    @apply bg-error-dim border border-error/25 text-error rounded-lg h-11 px-4 flex items-center justify-center gap-2 transition-all active:scale-97;
+    @apply bg-error-dim border border-error/25 text-error rounded-lg h-11 px-4 flex items-center justify-center gap-2 transition-all hover:bg-error/20 active:bg-error/30 active:scale-95;
   }
 }

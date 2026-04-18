@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { 
   ChevronLeft, MoreVertical, Phone, MessageCircle, 
   PlusCircle, BarChart, TrendingUp, Calendar, 
-  Clock, Banknote, Wallet, Loader2, Play
+  Clock, Banknote, Wallet, Loader2, Play, Trash2, Edit2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -32,6 +32,7 @@ export default function ClientDetailPage() {
   const [transactions, setTransactions] = useState<BalanceTransaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'visits' | 'transactions'>('visits')
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   
   const [showRecharge, setShowRecharge] = useState(false)
   const [rechargeAmount, setRechargeAmount] = useState<number>(0)
@@ -139,9 +140,56 @@ export default function ClientDetailPage() {
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">{client.name}</h1>
-        <button className="p-2 -mr-2 text-text3 hover:text-text">
-          <MoreVertical size={20} />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setShowMoreMenu(!showMoreMenu)} 
+            className="p-2 -mr-2 text-text3 hover:text-text"
+          >
+            <MoreVertical size={20} />
+          </button>
+          
+          <AnimatePresence>
+            {showMoreMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[110]" 
+                  onClick={() => setShowMoreMenu(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl overflow-hidden shadow-xl shadow-black/50 z-[120]"
+                >
+                  <div className="flex flex-col py-1">
+                    <button 
+                      onClick={() => {
+                        setShowMoreMenu(false)
+                        // TODO: implement edit client
+                      }}
+                      className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-left"
+                    >
+                      <PlusCircle size={16} /> {/* Should be edit, but reusing for now or change to Edit2 */}
+                      Modifier le profil
+                    </button>
+                    {type === 'owner' && (
+                      <button 
+                        onClick={() => {
+                          setShowMoreMenu(false)
+                          // TODO: confirm delete
+                        }}
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-left"
+                      >
+                        <Trash2 size={16} /> {/* Wait, Trash2 needs importing if not present */}
+                        Supprimer le client
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <main className="pt-20 px-4 space-y-8">

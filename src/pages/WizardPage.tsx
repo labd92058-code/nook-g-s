@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
   Store, MapPin, Navigation, Phone, Armchair, Clock, Star, Timer, 
-  User, CheckCircle, ArrowRight, Copy, Check, Loader2, Sliders
+  User, CheckCircle, ArrowRight, Copy, Check, Loader2, Sliders, Lock
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -259,14 +259,26 @@ export default function WizardPage() {
                   value={staffName}
                   onChange={(e) => setStaffName(e.target.value)}
                 />
-                <div className="flex flex-col items-center gap-4">
-                  <label className="text-sm font-medium text-text2">Code PIN (4 chiffres)</label>
-                  <PINDots length={staffPin.length} />
-                  <NumPad
-                    onPress={(v) => staffPin.length < 4 && setStaffPin(staffPin + v)}
-                    onDelete={() => setStaffPin(staffPin.slice(0, -1))}
-                    className="w-full"
-                  />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-text2">{t('staff.pin_setup')}</label>
+                  <div className="relative w-full">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-text3">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      value={staffPin}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '')
+                        setStaffPin(val)
+                      }}
+                      placeholder={t('auth.password')}
+                      className="input pl-11"
+                    />
+                  </div>
                 </div>
               </motion.div>
             )}

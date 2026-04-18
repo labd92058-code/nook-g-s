@@ -26,7 +26,8 @@ export default function SessionHistoryPage() {
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('today')
   const [customDate, setCustomDate] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'completed' | 'cancelled' | 'all'>('completed')
+  const [statusFilter, setStatusFilter] = useState<'completed' | 'cancelled' | 'active' | 'all'>('completed')
+  const [paymentFilter, setPaymentFilter] = useState<'cash' | 'card' | 'account' | 'free' | 'all'>('all')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
@@ -38,25 +39,29 @@ export default function SessionHistoryPage() {
         .from('sessions')
         .select('*')
         .eq('cafe_id', cafe.id)
-        .order('ended_at', { ascending: false })
+        .order('ended_at', { ascending: false, nullsFirst: true }) // nullsFirst so active sessions with null ended_at show at top
       
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter)
       } else {
-        query = query.in('status', ['completed', 'cancelled'])
+        query = query.in('status', ['active', 'completed', 'cancelled'])
+      }
+
+      if (paymentFilter !== 'all') {
+        query = query.eq('payment_method', paymentFilter)
       }
       
       if (period === 'today') {
-        query = query.gte('ended_at', startOfDay(new Date()).toISOString())
+        query = query.gte('started_at', startOfDay(new Date()).toISOString())
       } else if (period === 'week') {
-        query = query.gte('ended_at', startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString())
+        query = query.gte('started_at', startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString())
       } else if (period === 'month') {
-        query = query.gte('ended_at', startOfMonth(new Date()).toISOString())
+        query = query.gte('started_at', startOfMonth(new Date()).toISOString())
       } else if (period === 'custom' && customDate) {
         const start = startOfDay(new Date(customDate))
         const end = new Date(start)
         end.setDate(end.getDate() + 1)
-        query = query.gte('ended_at', start.toISOString()).lt('ended_at', end.toISOString())
+        query = query.gte('started_at', start.toISOString()).lt('started_at', end.toISOString())
       }
 
       const { data } = await query as any
@@ -65,7 +70,7 @@ export default function SessionHistoryPage() {
     }
 
     loadSessions()
-  }, [cafe, period, customDate, statusFilter])
+  }, [cafe, period, customDate, statusFilter, paymentFilter])
 
   const filteredSessions = sessions.filter(s => 
     s.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -109,7 +114,7 @@ export default function SessionHistoryPage() {
               className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text2 hover:text-text transition-colors relative"
             >
               <Filter size={18} />
-              {(period !== 'today' || statusFilter !== 'completed') && (
+              {(period !== 'today' || statusFilter !== 'completed' || paymentFilter !== 'all') && (
                 <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full" />
               )}
             </button>
@@ -192,7 +197,7 @@ export default function SessionHistoryPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="text-[11px] font-mono text-text3">
-                        {format(new Date(session.ended_at!), 'HH:mm')}
+                        {session.ended_at ? format(new Date(session.ended_at), 'HH:mm') : format(new Date(session.started_at), 'HH:mm')}
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-text">
@@ -200,14 +205,20 @@ export default function SessionHistoryPage() {
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-text3">
                           <Clock size={10} />
-                          {session.duration_minutes} min
+                          {session.duration_minutes || '- '} min
+                          {session.status === 'active' && (
+                            <span className="px-1.5 py-0.5 rounded bg-accent-glow text-accent2 border border-accent-border font-bold">Actif</span>
+                          )}
+                          {session.status === 'cancelled' && (
+                            <span className="px-1.5 py-0.5 rounded bg-error-dim text-error border border-error/20 font-bold">Annulée</span>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="text-sm font-mono font-bold text-text">
-                          {session.total_amount.toFixed(2)} DH
+                          {session.total_amount ? session.total_amount.toFixed(2) : '0.00'} DH
                         </div>
                         <div className="flex justify-end mt-0.5 text-text3">
                           {getPaymentIcon(session.payment_method)}
@@ -287,6 +298,7 @@ export default function SessionHistoryPage() {
             <div className="flex flex-wrap gap-2">
               {[
                 { id: 'all', label: 'Tous' },
+                { id: 'active', label: 'Actives' },
                 { id: 'completed', label: 'Terminées' },
                 { id: 'cancelled', label: 'Annulées' },
               ].map(s => (
@@ -301,6 +313,33 @@ export default function SessionHistoryPage() {
                 >
                   {statusFilter === s.id && <Check size={14} />}
                   {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment Method Filter */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">Par paiement</h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'all', label: 'Tous' },
+                { id: 'cash', label: 'Espèces' },
+                { id: 'card', label: 'Carte' },
+                { id: 'account', label: 'Compte' },
+                { id: 'free', label: 'Offert' },
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setPaymentFilter(p.id as any)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
+                    paymentFilter === p.id 
+                      ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
+                      : 'bg-surface2 text-text3 border-border hover:border-text3'
+                  }`}
+                >
+                  {paymentFilter === p.id && <Check size={14} />}
+                  {p.label}
                 </button>
               ))}
             </div>

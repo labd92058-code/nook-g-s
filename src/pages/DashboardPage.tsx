@@ -179,59 +179,6 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Quick Actions */}
-        <section className="space-y-3 mt-5">
-          <h2 className="text-[15px] font-bold text-text font-outfit">{t('dashboard.quick_actions')}</h2>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => navigate('/sessions/new')}
-              className="h-[76px] flex flex-col items-center justify-center gap-2 rounded-xl bg-accent-glow border border-accent-border transition-transform active:scale-95"
-            >
-              <PlusCircle size={22} className="text-accent2" />
-              <span className="text-xs font-semibold text-text">{t('dashboard.start_session')}</span>
-            </button>
-            <button
-              onClick={() => navigate('/sessions')}
-              className="h-[76px] flex flex-col items-center justify-center gap-2 rounded-xl bg-surface border border-border transition-transform active:scale-95"
-            >
-              <List size={22} className="text-text2" />
-              <span className="text-xs font-semibold text-text">{t('dashboard.history')}</span>
-            </button>
-            <button
-              onClick={() => {
-                if (type === 'owner' || (staff?.permissions as any)?.clients) {
-                  navigate('/clients')
-                } else {
-                  addToast("Accès refusé", 'error')
-                }
-              }}
-              className={`h-[76px] flex flex-col items-center justify-center gap-2 rounded-xl border transition-transform active:scale-95
-                ${type === 'owner' || (staff?.permissions as any)?.clients 
-                  ? 'bg-surface border-border' 
-                  : 'bg-surface/50 border-border/50 opacity-60 grayscale'}`}
-            >
-              <Users size={22} className="text-text2" />
-              <span className="text-xs font-semibold text-text">{t('dashboard.clients')}</span>
-            </button>
-            <button
-              onClick={() => {
-                if (type === 'owner' || (staff?.permissions as any)?.reports) {
-                  navigate('/reports')
-                } else {
-                  addToast("Accès refusé", 'error')
-                }
-              }}
-              className={`h-[76px] flex flex-col items-center justify-center gap-2 rounded-xl border transition-transform active:scale-95
-                ${type === 'owner' || (staff?.permissions as any)?.reports 
-                  ? 'bg-surface border-border' 
-                  : 'bg-surface/50 border-border/50 opacity-60 grayscale'}`}
-            >
-              <BarChart2 size={22} className="text-text2" />
-              <span className="text-xs font-semibold text-text">{t('dashboard.reports')}</span>
-            </button>
-          </div>
-        </section>
-
         {/* Last Sessions */}
         {lastSessions.length > 0 && (
           <section className="space-y-4">

@@ -34,6 +34,7 @@ export default function SessionDetailPage() {
   const [showExtras, setShowExtras] = useState(false)
   const [showEnd, setShowEnd] = useState(false)
   const [showCancel, setShowCancel] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   
   const [products, setProducts] = useState<Product[]>([])
   const [selectedExtras, setSelectedExtras] = useState<Record<string, number>>({})
@@ -225,7 +226,58 @@ export default function SessionDetailPage() {
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">Place {session.seat_number}</h1>
-        <div className="w-8" /> {/* Spacer to keep title centered */}
+        <div className="relative">
+          <button 
+            onClick={() => setShowMoreMenu(!showMoreMenu)} 
+            className="p-2 -mr-2 text-text3 hover:text-text"
+          >
+            <MoreVertical size={20} />
+          </button>
+
+          <AnimatePresence>
+            {showMoreMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[110]" 
+                  onClick={() => setShowMoreMenu(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl overflow-hidden shadow-xl shadow-black/50 z-[120]"
+                >
+                  <div className="flex flex-col py-1">
+                    {session.status === 'active' && (
+                      <button 
+                        onClick={() => {
+                          setShowMoreMenu(false)
+                          // TODO: implement edit name
+                        }}
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-left"
+                      >
+                        <Edit2 size={16} />
+                        Modifier le nom
+                      </button>
+                    )}
+                    {type === 'owner' && (
+                      <button 
+                        onClick={() => {
+                          setShowMoreMenu(false)
+                          setShowCancel(true)
+                        }}
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-left"
+                      >
+                        <Trash2 size={16} />
+                        Annuler la session
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <main className="pt-20 px-4 space-y-6">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { Store, Users, Mail, Lock, Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -16,10 +16,11 @@ import { Staff } from '../types'
 export default function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const { setOwner, setStaff, setCafe } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
 
-  const [role, setRole] = useState<'owner' | 'staff'>('owner')
+  const [role, setRole] = useState<'owner' | 'staff'>((location.state as any)?.defaultRole || 'owner')
   const [isLoading, setIsLoading] = useState(false)
 
   // Owner form
@@ -395,13 +396,29 @@ export default function LoginPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-center gap-6 pt-2">
-                      <PINDots length={pin.length} error={pinError} />
-                      <NumPad
-                        onPress={handlePinPress}
-                        onDelete={() => setPin(pin.slice(0, -1))}
-                        className="w-full"
-                      />
+                    <div className="space-y-2 pt-2">
+                      <label className="text-sm font-medium text-text2">{t('auth.password')}</label>
+                      <div className="relative w-full">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-text3">
+                          <Lock className="w-4 h-4" />
+                        </div>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={4}
+                          value={pin}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '')
+                            setPin(val)
+                            if (val.length === 4) handleStaffLogin(val)
+                          }}
+                          placeholder={t('auth.password')}
+                          className={`input pl-11 ${
+                            pinError ? 'border-error text-error focus:border-error focus:shadow-[0_0_0_3px_rgba(239,68,68,0.08)]' : ''
+                          }`}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -19,7 +19,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       primary: 'btn-primary',
       ghost: 'btn-ghost',
       danger: 'btn-danger',
-      success: 'bg-success-dim border border-success/20 text-success rounded-lg h-11 px-4 flex items-center justify-center gap-2 transition-all active:scale-97',
+      success: 'bg-success-dim border border-success/20 text-success rounded-lg h-11 px-4 flex items-center justify-center gap-2 transition-all hover:bg-success/20 active:bg-success/30 active:scale-97',
     }
 
     return (
