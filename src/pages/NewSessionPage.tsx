@@ -43,11 +43,18 @@ export default function NewSessionPage() {
         .from('sessions')
         .select('customer_name')
         .eq('cafe_id', cafe.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
+        .order('started_at', { ascending: false })
+        .limit(50)
       
       if (data) {
-        const unique = Array.from(new Set(data.map(s => s.customer_name))).slice(0, 6)
+        const seen = new Set<string>()
+        const unique: string[] = []
+        for (const s of data) {
+          if (!seen.has(s.customer_name) && unique.length < 6) {
+            seen.add(s.customer_name)
+            unique.push(s.customer_name)
+          }
+        }
         setRecentCustomers(unique)
       }
     }

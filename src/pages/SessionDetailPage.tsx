@@ -41,36 +41,26 @@ export default function SessionDetailPage() {
   const [itemToRemove, setItemToRemove] = useState<number | null>(null)
 
   useEffect(() => {
-    const loadSession = async () => {
-      if (!id) return
-      const { data, error } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (error || !data) {
+    const loadData = async () => {
+      if (!id || !cafe) return
+
+      const [sessionResult, productsResult] = await Promise.all([
+        supabase.from('sessions').select('*').eq('id', id).single(),
+        supabase.from('products').select('*').eq('cafe_id', cafe.id).eq('active', true).order('sort_order'),
+      ])
+
+      if (sessionResult.error || !sessionResult.data) {
         addToast("Session non trouvée", "error")
         navigate('/dashboard')
         return
       }
-      setSession(data)
+
+      setSession(sessionResult.data)
+      if (productsResult.data) setProducts(productsResult.data)
       setIsLoading(false)
     }
 
-    const loadProducts = async () => {
-      if (!cafe) return
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .eq('cafe_id', cafe.id)
-        .eq('active', true)
-        .order('sort_order')
-      if (data) setProducts(data)
-    }
-
-    loadSession()
-    loadProducts()
+    loadData()
   }, [id, cafe])
 
   useEffect(() => {

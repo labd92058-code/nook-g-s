@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
@@ -31,7 +31,9 @@ export default function DashboardPage() {
 
   useRealtime()
 
-  const loadStats = async () => {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const loadStats = useCallback(async () => {
     if (!cafe) return
     setIsRefreshing(true)
     
@@ -40,14 +42,15 @@ export default function DashboardPage() {
     
     const { data: sessions } = await supabase
       .from('sessions')
-      .select('*')
+      .select('id, total_amount, ended_at, seat_number, customer_name, duration_minutes, payment_method, status')
       .eq('cafe_id', cafe.id)
       .eq('status', 'completed')
       .gte('ended_at', today.toISOString())
-      .order('ended_at', { ascending: false }) as any
+      .order('ended_at', { ascending: false })
+      .limit(100) as any
     
     if (sessions) {
-      const revenue = sessions.reduce((acc, s) => acc + s.total_amount, 0)
+      const revenue = sessions.reduce((acc: number, s: any) => acc + s.total_amount, 0)
       setTodayStats({
         revenue,
         total: sessions.length + activeSessions.length,
@@ -56,11 +59,21 @@ export default function DashboardPage() {
       setLastSessions(sessions.slice(0, 5))
     }
     setIsRefreshing(false)
-  }
+  }, [cafe, activeSessions.length])
 
   useEffect(() => {
     loadStats()
-  }, [cafe, activeSessions.length])
+  }, [cafe])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      loadStats()
+    }, 800)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [activeSessions.length])
 
   const hasPermission = (perm: 'reports' | 'clients') => {
     if (type === 'owner') return true
