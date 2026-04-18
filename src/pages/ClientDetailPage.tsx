@@ -39,36 +39,31 @@ export default function ClientDetailPage() {
   const [rechargeRef, setRechargeRef] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  // CONFLICT RESOLVED: all three queries now run in parallel via Promise.all
   const loadData = async () => {
     if (!id) return
     setIsLoading(true)
-    
-    const { data: clientData } = await supabase
-      .from('client_accounts')
-      .select('*')
-      .eq('id', id)
-      .single()
-    
-    if (clientData) {
-      setClient(clientData)
-      
-      const { data: sessionData } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('client_account_id', id)
-        .order('created_at', { ascending: false })
-      
-      if (sessionData) setSessions(sessionData)
+    try {
+      const [clientRes, sessionRes, transRes] = await Promise.all([
+        supabase.from('client_accounts').select('*').eq('id', id).single(),
+        supabase.from('sessions').select('*').eq('client_account_id', id).order('created_at', { ascending: false }),
+        supabase.from('balance_transactions').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+      ])
 
-      const { data: transData } = await supabase
-        .from('balance_transactions')
-        .select('*')
-        .eq('client_id', id)
-        .order('created_at', { ascending: false })
-      
-      if (transData) setTransactions(transData)
+      if (clientRes.error || !clientRes.data) {
+        addToast("Client non trouvé", "error")
+        navigate(-1)
+        return
+      }
+
+      setClient(clientRes.data)
+      if (sessionRes.data) setSessions(sessionRes.data)
+      if (transRes.data) setTransactions(transRes.data)
+    } catch (err: any) {
+      addToast(err.message, 'error')
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   useEffect(() => {
