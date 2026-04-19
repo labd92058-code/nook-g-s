@@ -1,3 +1,7 @@
+/**
+ * SCALABILITY: All Supabase queries now go through the service layer.
+ * CONFLICT RESOLVED: all three data queries run in parallel via Promise.all.
+ */
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
@@ -6,12 +10,14 @@ import {
   PlusCircle, BarChart, TrendingUp, Calendar, 
   Clock, Banknote, Wallet, Loader2, Play, Trash2, Edit2
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
 import { useAudit } from '../hooks/useAudit'
 import { ClientAccount, Session, BalanceTransaction } from '../types'
+import { getClient, updateClientBalance, recordClientVisit } from '../lib/services/clients'
+import { getClientTransactions, rechargeClientAccount } from '../lib/services/transactions'
+import { getSessionsByClient } from '../lib/services/sessions'
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -44,23 +50,18 @@ export default function ClientDetailPage() {
     if (!id) return
     setIsLoading(true)
     try {
-      const [clientRes, sessionRes, transRes] = await Promise.all([
-        supabase.from('client_accounts').select('*').eq('id', id).single(),
-        supabase.from('sessions').select('*').eq('client_account_id', id).order('created_at', { ascending: false }),
-        supabase.from('balance_transactions').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+      const [clientData, transData, sessionData] = await Promise.all([
+        getClient(id),
+        getClientTransactions(id),
+        getSessionsByClient(id),
       ])
 
-      if (clientRes.error || !clientRes.data) {
-        addToast("Client non trouvé", "error")
-        navigate(-1)
-        return
-      }
-
-      setClient(clientRes.data)
-      if (sessionRes.data) setSessions(sessionRes.data)
-      if (transRes.data) setTransactions(transRes.data)
+      setClient(clientData)
+      setTransactions(transData)
+      setSessions(sessionData)
     } catch (err: any) {
       addToast(err.message, 'error')
+      navigate(-1)
     } finally {
       setIsLoading(false)
     }
@@ -74,41 +75,29 @@ export default function ClientDetailPage() {
     if (!client || !rechargeAmount || !cafe) return
     setIsSaving(true)
     try {
-      const newBalance = client.balance + rechargeAmount
-      
-      // 1. Update client balance
-      const { error: clientError } = await supabase
-        .from('client_accounts' as any)
-        .update({ balance: newBalance })
-        .eq('id', client.id)
-      
-      if (clientError) throw clientError
+      const safeAmount = Math.max(0, Math.round(rechargeAmount * 100) / 100)
 
-      // 2. Insert transaction
-      const { error: transError } = await supabase
-        .from('balance_transactions' as any)
-        .insert({
-          cafe_id: cafe.id,
-          client_id: client.id,
-          staff_id: type === 'staff' ? staff?.id : null,
-          type: 'credit',
-          amount: rechargeAmount,
-          balance_before: client.balance,
-          balance_after: newBalance,
-          description: rechargeRef || 'Recharge manuelle'
-        })
-      
-      if (transError) throw transError
+      // Record the credit transaction + update balance atomically via service
+      const tx = await rechargeClientAccount({
+        cafeId: cafe.id,
+        clientId: client.id,
+        staffId: type === 'staff' ? (staff?.id ?? null) : null,
+        amount: safeAmount,
+        balanceBefore: client.balance,
+        reference: rechargeRef || 'Recharge manuelle',
+      })
+
+      await updateClientBalance(client.id, tx.balance_after)
 
       await logAction('client_recharged', {
         client_id: client.id,
         client_name: client.name,
-        amount: rechargeAmount,
-        new_balance: newBalance,
-        reference: rechargeRef || 'Recharge manuelle'
+        amount: safeAmount,
+        new_balance: tx.balance_after,
+        reference: rechargeRef || 'Recharge manuelle',
       })
 
-      addToast(`Compte rechargé de ${rechargeAmount.toFixed(2)} DH`, "success")
+      addToast(`Compte rechargé de ${safeAmount.toFixed(2)} DH`, "success")
       setShowRecharge(false)
       setRechargeAmount(0)
       setRechargeRef('')

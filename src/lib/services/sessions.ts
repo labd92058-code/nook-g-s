@@ -49,6 +49,18 @@ export async function getCompletedSessions(
   return (data as Session[]) ?? []
 }
 
+/** Fetch all sessions for a specific client account. */
+export async function getSessionsByClient(clientId: string): Promise<Session[]> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('client_account_id', clientId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data as Session[]) ?? []
+}
+
 /** Fetch recent distinct customer names for autocomplete. */
 export async function getRecentCustomerNames(cafeId: string, max = 6): Promise<string[]> {
   const { data, error } = await supabase

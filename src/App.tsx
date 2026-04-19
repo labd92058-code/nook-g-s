@@ -82,50 +82,58 @@ function AppRoutes() {
     const initAuth = async () => {
       setLoading(true)
       
-      // 1. Check Supabase Auth (Owner)
-      const { data: { session } } = await supabase.auth.getSession()
-      
       // Add minimum loading time for the splash screen effect
-      const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000))
+      const minLoadTime = new Promise(resolve => setTimeout(resolve, 1500))
       
-      let authPromise = (async () => {
-        if (session?.user) {
-          setOwner(session.user)
-          const { data: cafe } = await supabase
-            .from('cafes')
-            .select('*')
-            .eq('owner_id', session.user.id)
-            .single()
+      const authPromise = (async () => {
+        try {
+          // 1. Check Supabase Auth (Owner)
+          const { data: { session } } = await supabase.auth.getSession()
           
-          if (cafe) setCafe(cafe)
-        } else {
-          // 2. Check Local Storage (Staff)
-          const staffSession = localStorage.getItem('nook_staff_session')
-          if (staffSession) {
-            const parsed = JSON.parse(staffSession)
-            if (new Date(parsed.expires_at) > new Date()) {
-              const { data: staff } = await supabase
-                .from('staff')
-                .select('*')
-                .eq('id', parsed.staff_id)
-                .single()
-              
-              const { data: cafe } = await supabase
-                .from('cafes')
-                .select('*')
-                .eq('id', parsed.cafe_id)
-                .single()
+          if (session?.user) {
+            setOwner(session.user)
+            const { data: cafe } = await supabase
+              .from('cafes')
+              .select('*')
+              .eq('owner_id', session.user.id)
+              .single()
+            
+            if (cafe) setCafe(cafe)
+          } else {
+            // 2. Check Local Storage (Staff)
+            const staffSession = localStorage.getItem('nook_staff_session')
+            if (staffSession) {
+              try {
+                const parsed = JSON.parse(staffSession)
+                if (new Date(parsed.expires_at) > new Date()) {
+                  const { data: staff } = await supabase
+                    .from('staff')
+                    .select('*')
+                    .eq('id', parsed.staff_id)
+                    .single()
+                  
+                  const { data: cafe } = await supabase
+                    .from('cafes')
+                    .select('*')
+                    .eq('id', parsed.cafe_id)
+                    .single()
 
-              if (staff && cafe) {
-                setStaff(staff)
-                setCafe(cafe)
+                  if (staff && cafe) {
+                    setStaff(staff)
+                    setCafe(cafe)
+                  }
+                } else {
+                  localStorage.removeItem('nook_staff_session')
+                }
+              } catch {
+                localStorage.removeItem('nook_staff_session')
               }
-            } else {
-              localStorage.removeItem('nook_staff_session')
             }
           }
+        } catch {
+          // Auth check failed (e.g. missing Supabase credentials) — continue unauthenticated
         }
-      })();
+      })()
 
       await Promise.all([authPromise, minLoadTime])
       

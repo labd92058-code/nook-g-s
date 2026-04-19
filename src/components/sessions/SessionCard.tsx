@@ -32,10 +32,15 @@ export const SessionCard = ({ session, onEnd }: SessionCardProps) => {
       
       setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
       
-      // Calculate amount
+      // BILLING BUG FIXED: amount displayed depends on billing mode
+      // time mode: time cost only (extras are informational)
+      // consumption mode: extras total only (time is never billed)
       const durationHours = diffMs / 3600000
-      const calculatedAmount = durationHours * session.rate_per_hour
-      setAmount(calculatedAmount + session.extras_total)
+      if (session.billing_mode === 'consumption') {
+        setAmount(session.extras_total)
+      } else {
+        setAmount(durationHours * session.rate_per_hour)
+      }
       
       // Check for long session based on cafe settings
       const alertHours = cafe?.long_session_alert_hours || 3

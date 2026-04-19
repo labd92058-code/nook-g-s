@@ -1,3 +1,7 @@
+/**
+ * SCALABILITY: All Supabase queries now go through the service layer (lib/services/clients.ts).
+ * No raw supabase calls in this component.
+ */
 import * as React from 'react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -6,11 +10,11 @@ import {
   Search, UserPlus, Wallet, Phone, FileText, 
   ChevronRight, Plus, Loader2, User
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
 import { ClientAccount } from '../types'
+import { getClients, createClient } from '../lib/services/clients'
 import { TopBar } from '../components/layout/TopBar'
 import { BottomNav } from '../components/layout/BottomNav'
 import { Input } from '../components/ui/Input'
@@ -42,14 +46,14 @@ export default function ClientsPage() {
   const loadClients = async () => {
     if (!cafe) return
     setIsLoading(true)
-    const { data } = await supabase
-      .from('client_accounts')
-      .select('*')
-      .eq('cafe_id', cafe.id)
-      .order('updated_at', { ascending: false })
-    
-    if (data) setClients(data)
-    setIsLoading(false)
+    try {
+      const data = await getClients(cafe.id)
+      setClients(data)
+    } catch (err: any) {
+      addToast(err.message, 'error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -61,18 +65,14 @@ export default function ClientsPage() {
     if (!cafe || !newName) return
     setIsSaving(true)
     try {
-      const { error } = await supabase
-        .from('client_accounts' as any)
-        .insert({
-          cafe_id: cafe.id,
-          name: newName,
-          phone: newPhone || null,
-          balance: newBalance,
-          notes: newNotes || null
-        })
-      
-      if (error) throw error
-      
+      await createClient({
+        cafeId: cafe.id,
+        name: newName,
+        phone: newPhone || null,
+        balance: newBalance,
+        notes: newNotes || null,
+      })
+
       addToast("Compte client créé", "success")
       setShowNewClient(false)
       setNewName('')

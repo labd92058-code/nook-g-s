@@ -1,10 +1,11 @@
 /**
  * BILLING ENGINE: dual billing mode implemented.
- * - 'time': total = timeCost only. Consumptions are informational.
+ * - 'time': total = timeCost ONLY. Consumptions (extras) are informational — never billed.
  * - 'consumption': total = sum of extras. Time is NEVER included in the amount.
  *
  * CONFLICT RESOLVED: loadSession and loadProducts now run in parallel.
  * BILLING BUG FIXED: duration uses Math.floor (no float drift), amounts rounded to 2dp.
+ * BILLING BUG FIXED: time mode no longer adds extras_total to the total. Time only.
  */
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -154,10 +155,11 @@ export default function SessionDetailPage() {
       const finalTimeCost = computeTimeCost(elapsedMs, session.rate_per_hour)
 
       // HARD RULE: billing_mode determines what gets charged
+      // BILLING BUG FIXED: time mode bills time ONLY — extras are informational, never billed
       const totalAmount =
         session.billing_mode === 'consumption'
           ? Math.max(0, Math.round(session.extras_total * 100) / 100)  // time NEVER included
-          : Math.max(0, Math.round((finalTimeCost + session.extras_total) * 100) / 100)
+          : Math.max(0, Math.round(finalTimeCost * 100) / 100)  // time ONLY, extras not billed
 
       await endSession({
         sessionId: session.id,
@@ -210,10 +212,11 @@ export default function SessionDetailPage() {
   }
 
   // Compute what to show as the bill total based on billing mode
+  // BILLING BUG FIXED: time mode shows time cost ONLY — extras are informational
   const displayTotal =
     session.billing_mode === 'consumption'
       ? Math.max(0, Math.round(session.extras_total * 100) / 100)
-      : Math.max(0, Math.round((timeCost + session.extras_total) * 100) / 100)
+      : Math.max(0, Math.round(timeCost * 100) / 100)  // time ONLY
 
   const isConsumption = session.billing_mode === 'consumption'
 

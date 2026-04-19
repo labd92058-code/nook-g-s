@@ -1,0 +1,236 @@
+You are a senior full-stack engineer performing a full audit, refactor, and feature build on Nook OS — a café management system built with React (frontend) and Supabase (backend/database). Your job covers five areas: fix all errors, resolve logic conflicts, make the architecture scalable, build offline support, and implement a dual billing mode system.
+
+---
+
+## PRODUCT CONTEXT
+
+Nook OS is a café/library management platform. The current scope is:
+- Café owners (admins) manage their venue through a dashboard
+- Customers walk in and are managed as client accounts (no self-service app)
+- No QR code features exist or are planned for now
+- No student-specific features — those were removed
+- Core tables in Supabase: client_accounts, products, balance_transactions, sessions (plus any existing tables)
+
+There is NO student module. Do not reference, restore, or suggest anything student-related.
+
+---
+
+## TASK 1 — ERROR FIXING
+
+Go through every file and:
+- Fix all TypeScript/JavaScript errors (type mismatches, undefined references, broken imports)
+- Fix all broken Supabase queries (wrong table names, missing .select(), unhandled errors)
+- Fix all React errors (missing keys, invalid hook usage, undefined state access)
+- Fix all async/await issues and unhandled promise rejections
+- Ensure all environment variables are correctly referenced (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, etc.)
+- Remove or fix any dead code that references removed features (student app, QR codes, student-specific tables or logic)
+
+---
+
+## TASK 2 — LOGIC CONFLICT RESOLUTION
+
+Identify and resolve all logic conflicts, including:
+- Duplicate state management (same data fetched in multiple places without sharing)
+- Inconsistent data flow between components (prop drilling vs context vs store)
+- Auth logic conflicts (session checks done in multiple inconsistent ways)
+- Role/permission checks that are inconsistent or duplicated
+- Balance transaction logic — ensure credits and debits are always correctly signed and consistent
+- Any race conditions in async data fetching
+- Conflicting route guards or navigation logic
+
+For each conflict found, explain what the conflict was and how you resolved it in a comment at the top of the affected file.
+
+---
+
+## TASK 3 — SCALABILITY REFACTOR
+
+Refactor the codebase to be production-ready and scalable:
+
+### Architecture
+- Enforce a clear folder structure: /features (one folder per domain: auth, clients, products, transactions, sessions, billing, dashboard), /shared (reusable components, hooks, utils), /lib (supabase client, offline engine, config)
+- Each feature folder should have: components/, hooks/, types.ts, and optionally api.ts for Supabase calls
+
+### Supabase layer
+- All Supabase queries must go through dedicated service functions (not raw queries inside components)
+- Add proper error handling and loading states to all queries
+- Use Supabase Row Level Security (RLS) assumptions — write queries that will work correctly once RLS is enabled per venue
+- Design queries with multi-venue support in mind (every major table should eventually have a venue_id — flag tables that are missing it)
+
+### State management
+- Use React Context for global state (auth session, active venue, connectivity status)
+- Use React Query for all server data — apply it consistently across the app
+
+### Components
+- Break down any component over 200 lines into smaller focused components
+- Extract all hardcoded strings (labels, messages) into constants
+- Make all UI components receive data via props with proper TypeScript types — no components that fetch their own data unless they are page-level containers
+
+---
+
+## TASK 4 — BILLING ENGINE AUDIT & DUAL BILLING MODE
+
+### 4A — Audit existing time billing logic
+
+Review the entire time billing engine and verify:
+- Session start time is recorded correctly (use server timestamp, not client time)
+- Session duration is calculated without floating point drift
+- Billing rate is applied consistently (per minute or per hour — pick one and enforce it everywhere)
+- Paused sessions: if pause is supported, verify pause/resume time tracking is gap-free
+- Session end: verify the final amount due is calculated correctly and matches what gets written to balance_transactions
+- Edge cases handled: session ending at midnight, very short sessions (under 1 minute), very long sessions (over 8 hours)
+- No session can end with a negative duration
+- The billed amount must always be a non-negative number rounded to 2 decimal places
+
+Flag any calculation bugs found with a // BILLING BUG comment and fix them.
+
+### 4B — Build dual billing mode
+
+When a new session is opened for a client, the staff member must choose one of two billing modes. This choice is made once at session start and cannot be changed mid-session.
+
+---
+
+MODE 1: TIME BILLING
+- The client pays based on how long they sit
+- Rate is set per venue (e.g. 5 MAD per 30 minutes)
+- Timer starts when the session is opened
+- At checkout, the total due = time elapsed × rate
+- Any consumptions ordered during the session are tracked for internal records only — they do NOT add to the final bill
+- Revenue recorded = time amount only
+
+---
+
+MODE 2: CONSUMPTION BILLING
+- The client pays only for what they order (coffee, food, etc.)
+- Time is still tracked and displayed on the session (for operational awareness) but time is NEVER billed
+- At checkout, the total due = sum of all products ordered
+- Time cost must NEVER appear in the invoice, receipt, or balance_transactions entry
+- Revenue recorded = consumption amount only
+
+---
+
+Implementation requirements:
+
+Database:
+- Add a billing_mode column to the sessions table: ENUM or CHECK constraint, values: 'time' | 'consumption'
+- Add a session_consumptions table if it does not exist: id, session_id, product_id, quantity, unit_price, created_at
+- The balance_transactions entry at checkout must record: amount, billing_mode, and a breakdown field (JSONB) with the detail
+
+Session open flow:
+- When opening a session, show a clear modal/step where staff selects billing mode
+- Display a short explanation of each mode so staff cannot confuse them
+- Store the chosen mode in the session record immediately on creation
+
+Checkout flow:
+- If billing_mode = 'time': calculate time cost, show time breakdown, set consumptions aside in the breakdown JSONB but do not add to total
+- If billing_mode = 'consumption': sum all session_consumptions, show itemized receipt, never show or calculate a time charge
+- The checkout UI must visually distinguish the two modes (different badge color or label)
+- After checkout, session status = 'closed', end_time recorded, final_amount stored
+
+Types to create:
+  type BillingMode = 'time' | 'consumption'
+
+  type Session = {
+    id: string
+    client_id: string
+    venue_id: string
+    billing_mode: BillingMode
+    start_time: string        // ISO timestamp, server-generated
+    end_time: string | null
+    status: 'open' | 'closed' | 'paused'
+    final_amount: number | null
+    created_at: string
+  }
+
+  type SessionConsumption = {
+    id: string
+    session_id: string
+    product_id: string
+    quantity: number
+    unit_price: number
+    created_at: string
+  }
+
+  type BalanceTransaction = {
+    id: string
+    client_id: string
+    venue_id: string
+    amount: number
+    billing_mode: BillingMode
+    breakdown: Record   // JSONB
+    created_at: string
+  }
+
+---
+
+## TASK 5 — OFFLINE MODE
+
+Build a complete offline-first layer so Nook OS works fully when the internet connection drops (e.g. unstable café wifi).
+
+### Strategy
+- Use IndexedDB (via idb or Dexie.js) as the local cache and offline queue
+- Detect connectivity using navigator.onLine + a lightweight Supabase ping
+- Show a persistent offline banner in the UI when the app is offline
+
+### What must work offline
+- Opening a new session (saved locally, synced when online)
+- Adding consumptions to an open session (saved locally)
+- Closing/checking out a session (calculated locally, synced when online)
+- Viewing currently open sessions (read from local cache)
+- Viewing the product list (read from local cache, refreshed when online)
+
+### What can be deferred until online
+- Creating new client accounts
+- Viewing historical reports or past transactions
+- Changing venue settings
+
+### Sync logic
+- Every write made offline is added to an outbox queue in IndexedDB with: action type, payload, timestamp, retry count
+- When connectivity is restored, process the outbox queue in order (FIFO)
+- If a sync fails after 3 retries, mark the entry as failed and alert the admin
+- After successful sync, clear the local outbox entry and confirm with a toast notification
+
+### Conflict resolution
+- If a session was opened offline and the same client already has an open session online, flag it as a conflict and require manual resolution by admin
+- Never silently overwrite server data — always prefer server data for reads, local data for pending writes
+
+### Implementation
+- Create /lib/offline/db.ts — initializes the IndexedDB schema using Dexie
+- Create /lib/offline/queue.ts — outbox queue: enqueue, dequeue, retry logic
+- Create /lib/offline/sync.ts — sync runner triggered on connectivity restore
+- Create /shared/hooks/useConnectivity.ts — returns { isOnline, lastSyncAt }
+- Wrap all Supabase write calls in a helper that decides: if online → write to Supabase directly; if offline → write to local DB + add to outbox
+
+---
+
+## TASK 6 — CODE QUALITY
+
+- Add TypeScript types for all Supabase table rows
+- Ensure consistent naming conventions: camelCase for variables/functions, PascalCase for components, snake_case for DB columns
+- Remove all console.log statements except those intentionally kept for debug (mark those with // DEBUG)
+- Add a brief JSDoc comment to every exported function explaining what it does
+
+---
+
+## CONSTRAINTS
+
+- Do not add features beyond what is described — only fix, refactor, and build what is listed
+- Do not introduce new third-party libraries without flagging them first as a suggestion (exception: Dexie.js for offline is approved)
+- Keep the Supabase-first architecture
+- Do not add any QR code, student, or self-service customer portal features
+- Preserve all existing data models — only modify schemas if a bug is found or if required by Tasks 4–5
+- Consumption billing must NEVER leak time cost into revenue figures — this is a hard business rule
+
+---
+
+## OUTPUT FORMAT
+
+After completing the full audit and build, provide:
+1. Summary of all errors found and fixed (grouped by type)
+2. List of all logic conflicts resolved
+3. List of scalability changes made
+4. Billing engine bugs found and fixed
+5. Description of the dual billing mode implementation (DB changes, new components, checkout flow)
+6. Description of the offline architecture (files created, sync strategy, what works offline)
+7. Any flagged issues requiring a human decision (ambiguous business logic, schema migrations, library suggestions)
+
+Start by reading the full file tree, then proceed area by area.

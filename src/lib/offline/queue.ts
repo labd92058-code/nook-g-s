@@ -22,16 +22,18 @@ export async function enqueue(
 
 /** Get all pending (non-failed) entries in FIFO order. */
 export async function getPendingEntries(): Promise<OutboxEntry[]> {
-  return db.outbox
-    .where('failed').equals(0)
-    .sortBy('createdAt')
+  // LOGIC FIX: Dexie stores booleans as booleans, not as 0/1 integers.
+  // Using filter instead of where/equals to avoid IndexedDB boolean index mismatch.
+  const all = await db.outbox.toArray()
+  return all
+    .filter(e => !e.failed)
+    .sort((a, b) => a.createdAt - b.createdAt)
 }
 
 /** Get all permanently-failed entries. */
 export async function getFailedEntries(): Promise<OutboxEntry[]> {
-  return db.outbox
-    .where('failed').equals(1)
-    .toArray()
+  const all = await db.outbox.toArray()
+  return all.filter(e => e.failed)
 }
 
 /** Mark an entry as processed — remove it from the queue. */
@@ -53,5 +55,6 @@ export async function recordRetryFailure(id: number): Promise<void> {
 
 /** How many items are waiting to sync. */
 export async function getPendingCount(): Promise<number> {
-  return db.outbox.where('failed').equals(0).count()
+  const all = await db.outbox.toArray()
+  return all.filter(e => !e.failed).length
 }

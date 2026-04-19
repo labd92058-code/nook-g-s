@@ -85,19 +85,32 @@ Run `supabase/migrations/001_billing_mode.sql` in the Supabase SQL editor to:
 - Create `session_consumptions` table (for consumption billing mode)
 - Add `billing_mode` and `breakdown JSONB` to `balance_transactions`
 
-## Billing Rules (Important)
-- **`time` mode**: `total_amount = timeCost` (consumptions tracked as extras but not billed separately)
-- **`consumption` mode**: `total_amount = sum(extras_total)` — time cost is NEVER included
+## Billing Rules (Important — Hard Rules)
+- **`time` mode**: `total_amount = timeCost` ONLY. Extras/consumptions are tracked for informational purposes only and are NEVER added to the billed total.
+- **`consumption` mode**: `total_amount = extras_total` ONLY. Time cost is NEVER included.
 - All monetary values: `Math.max(0, Math.round(amount * 100) / 100)` — non-negative, 2dp
 - Session duration: `Math.floor(elapsedMs / 60_000)` — whole minutes, no float drift
 
+## Bug Fixes Applied (Full-Stack Audit)
+- **Billing bug** (`SessionDetailPage`): `displayTotal` and `handleEndSession` now strictly enforce `time → timeCost only` / `consumption → extras_total only`. Extras are never double-counted.
+- **SessionCard amount**: computed per `billing_mode`, never mixes time + extras.
+- **Dexie boolean index bug** (`queue.ts`): IndexedDB cannot index booleans as integer 0/1; `getPendingEntries`, `getFailedEntries`, `getPendingCount` now use in-memory filter after `.toArray()`.
+- **Duplicate language state**: removed `language` from `uiStore`; single source of truth is `useLanguageStore` in `src/i18n/index.ts`.
+- **`useAudit` hook**: consolidated to delegate to `logAuditAction` service function (no direct Supabase calls in hook).
+- **`ClientDetailPage`**: fully migrated to service layer — `getClient`, `getClientTransactions`, `getSessionsByClient`, `rechargeClientAccount`, `updateClientBalance`.
+- **`ClientsPage`**: migrated to `getClients` / `createClient` service functions.
+- **`DashboardPage`**: `loadStats` now uses `getCompletedSessions` service function.
+- **`App.tsx` `initAuth`**: wrapped in try/catch so missing Supabase credentials no longer hang the loading spinner indefinitely.
+- **`index.html`**: added `body { background: #080b12; margin: 0 }` inline style so the shell is always dark before CSS loads.
+- **`sessions.ts` service**: added `getSessionsByClient(clientId)` function.
+
 ## Scalability Improvements Applied
-- **Service layer**: All Supabase queries centralized in `src/lib/services/` — pages never run raw queries
-- **Parallel DB queries**: `ClientDetailPage` and `SessionDetailPage` now load all data concurrently via `Promise.all`
-- **Debounced stats refresh**: Dashboard stats re-fetch is debounced (800ms)
-- **Selective column fetching**: Stats queries fetch only needed columns
-- **Offline-first**: Writes go through the outbox queue when offline; sync runs on reconnect
-- **Connectivity detection**: 15-second ping interval + browser online/offline events
-- **Dynamic imports**: Dexie/sync kept out of the initial bundle via dynamic `import()`
-- **Secure ID generation**: `crypto.randomUUID()` for toast IDs
-- **Host config**: `allowedHosts: true` + `host: '0.0.0.0'` in Vite for Replit proxying
+- **Service layer enforced**: Zero raw `supabase.from()` calls remain in any page component.
+- **Parallel DB queries**: `ClientDetailPage` loads client, transactions, and sessions concurrently via `Promise.all`.
+- **Debounced stats refresh**: Dashboard stats re-fetch is debounced (800ms).
+- **Selective column fetching**: Stats queries fetch only needed columns.
+- **Offline-first**: Writes go through the outbox queue when offline; sync runs on reconnect.
+- **Connectivity detection**: 15-second ping interval + browser online/offline events.
+- **Dynamic imports**: Dexie/sync kept out of the initial bundle via dynamic `import()`.
+- **Secure ID generation**: `crypto.randomUUID()` for toast IDs.
+- **Host config**: `allowedHosts: true` + `host: '0.0.0.0'` in Vite for Replit proxying.

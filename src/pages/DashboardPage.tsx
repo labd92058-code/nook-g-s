@@ -15,7 +15,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useUIStore } from '../stores/uiStore'
 import { useRealtime } from '../hooks/useRealtime'
 import { useTranslation } from '../i18n'
-import { supabase } from '../lib/supabase'
+import { getCompletedSessions } from '../lib/services/sessions'
 import { Session } from '../types'
 import { format } from 'date-fns'
 
@@ -36,29 +36,22 @@ export default function DashboardPage() {
   const loadStats = useCallback(async () => {
     if (!cafe) return
     setIsRefreshing(true)
-    
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    const { data: sessions } = await supabase
-      .from('sessions')
-      .select('id, total_amount, ended_at, seat_number, customer_name, duration_minutes, payment_method, status')
-      .eq('cafe_id', cafe.id)
-      .eq('status', 'completed')
-      .gte('ended_at', today.toISOString())
-      .order('ended_at', { ascending: false })
-      .limit(100) as any
-    
-    if (sessions) {
-      const revenue = sessions.reduce((acc: number, s: any) => acc + s.total_amount, 0)
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const sessions = await getCompletedSessions(cafe.id, today, 100)
+      const revenue = sessions.reduce((acc, s) => acc + s.total_amount, 0)
       setTodayStats({
         revenue,
         total: sessions.length + activeSessions.length,
-        completed: sessions.length
+        completed: sessions.length,
       })
       setLastSessions(sessions.slice(0, 5))
+    } catch {
+      // Non-fatal — stats refresh is best-effort
+    } finally {
+      setIsRefreshing(false)
     }
-    setIsRefreshing(false)
   }, [cafe, activeSessions.length])
 
   useEffect(() => {
