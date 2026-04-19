@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Timer, BarChart2, Users, Settings } from 'lucide-react'
+import { Home, Timer, Users, Settings } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useTranslation } from '../../i18n'
 import { motion } from 'motion/react'
@@ -19,7 +19,6 @@ export const BottomNav = () => {
   const navItems = [
     { icon: Home, label: t('dashboard.quick_actions'), path: '/dashboard', permission: true },
     { icon: Timer, label: t('dashboard.history'), path: '/sessions', permission: true },
-    { icon: BarChart2, label: t('dashboard.reports'), path: '/reports', permission: hasPermission('reports') },
     { icon: Users, label: t('dashboard.clients'), path: '/clients', permission: hasPermission('clients') },
     { icon: Settings, label: t('settings.title'), path: '/settings', permission: hasPermission('settings') },
   ]

@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
-  Store, DollarSign, Bell, ShoppingBag, Users, 
-  Key, Globe, User, LogOut, ChevronDown, 
-  ChevronRight, Copy, RefreshCw, Check, Activity
+  Store, DollarSign, ShoppingBag, Users, 
+  Key, Globe, LogOut, ChevronDown, 
+  ChevronRight, Copy, Check, BarChart2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
@@ -38,6 +38,11 @@ export default function SettingsPage() {
 
   const isOwner = type === 'owner'
   const canEditRates = isOwner || (staff?.permissions as any)?.rates
+  const hasPermission = (perm: 'reports' | 'clients' | 'settings') => {
+    if (isOwner) return true
+    if (!staff?.permissions) return false
+    return !!(staff.permissions as any)[perm]
+  }
 
   const handleSaveCafe = async () => {
     if (!cafe) return
@@ -122,6 +127,7 @@ export default function SettingsPage() {
         <Button onClick={handleSaveRates} isLoading={isSavingRates} className="w-full">Enregistrer les tarifs</Button>
       </div>
     )},
+    hasPermission('reports') && { id: 'reports', icon: BarChart2, title: t('dashboard.reports'), onClick: () => navigate('/reports') },
     { id: 'products', icon: ShoppingBag, title: t('settings.product_catalog'), onClick: () => navigate('/settings/products') },
     isOwner && { id: 'staff', icon: Users, title: t('settings.team'), onClick: () => navigate('/settings/staff') },
     isOwner && { id: 'invite', icon: Key, title: t('settings.invite_code'), content: (
